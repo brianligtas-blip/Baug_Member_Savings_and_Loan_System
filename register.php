@@ -620,28 +620,6 @@ function field_error($errors, $key) {
             </div>
         </section>
 
-        <div class="privacy-consent" id="privacy-consent">
-            <label class="checkbox-field">
-                <input
-                    type="checkbox"
-                    name="privacy_consent"
-                    value="1"
-                    required
-                    <?= !empty($_POST['privacy_consent']) ? 'checked' : '' ?>
-                >
-
-                <span>
-                    I have read and agree to the
-                    <a href="privacy.php"
-                        target="_blank"
-                        class="privacy-link">
-                    Privacy Notice
-                    </a>.
-                </span>
-            </label>
-        </div>
-
-
                 <!-- PRIVACY CONSENT -->
         <div class="privacy-consent" id="privacy-consent">
 
