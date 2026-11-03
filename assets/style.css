@@ -1407,3 +1407,184 @@ html {
     padding: 15px 24px;
     border-top: 1px solid #e0e8e2;
 }
+
+/* =====================================================
+   REGISTRATION FORM - ADDITIONAL STYLING
+   Keeps the existing green and white design
+===================================================== */
+
+/* Password visibility button */
+.password-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.password-field input {
+    flex: 1;
+    min-width: 0;
+}
+
+.password-toggle {
+    flex-shrink: 0;
+    padding: 8px 10px;
+    border: 1px solid #cbd9df;
+    border-radius: 6px;
+    background: #f1f8f3;
+    color: #075b37;
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    background: #d9f0df;
+}
+
+/* Password strength indicator */
+.password-strength {
+    width: 100%;
+    height: 7px;
+    margin-top: 7px;
+    overflow: hidden;
+    background: #e5ece7;
+    border-radius: 10px;
+}
+
+.password-strength-bar {
+    width: 0;
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.25s ease;
+}
+
+/* Password strength labels */
+.password-strength-text {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    color: #557264;
+}
+
+/* Username availability message */
+.username-status,
+.email-status {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.username-status.available,
+.email-status.available {
+    color: #087c43;
+}
+
+.username-status.taken,
+.email-status.taken {
+    color: #dc2626;
+}
+
+/* Password requirement list */
+.password-requirements {
+    margin-top: 8px;
+    padding-left: 20px;
+    color: #71887c;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.password-requirements li.valid {
+    color: #087c43;
+}
+
+/* Security questions */
+.security-question-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.security-question-group .field {
+    width: 100%;
+}
+
+/* Date and number inputs */
+.form-column .field input[type="date"],
+.form-column .field input[type="number"] {
+    cursor: pointer;
+}
+
+/* Consent checkbox validation */
+.checkbox-field input:focus {
+    outline: 2px solid rgba(8, 124, 67, 0.25);
+    outline-offset: 3px;
+}
+
+/* Disabled submit button */
+.btn:disabled,
+.form-column button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Server-side validation feedback */
+.field input.invalid,
+.field select.invalid,
+.field textarea.invalid {
+    border-color: #dc2626;
+    background: #fffafa;
+}
+
+.field input.valid,
+.field select.valid {
+    border-color: #087c43;
+}
+
+/* Form messages */
+.form-message {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border-radius: 7px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.form-message.error {
+    background: #ffe8e8;
+    color: #a32121;
+}
+
+.form-message.success {
+    background: #e2f7e8;
+    color: #075b37;
+}
+
+/* Registration form on smaller screens */
+@media (max-width: 480px) {
+    .registration-card {
+        padding: 18px 14px;
+    }
+
+    .section-title {
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .section-title span {
+        font-size: 21px;
+    }
+
+    .section-title h1 {
+        font-size: 17px;
+    }
+
+    .form-column .field input,
+    .form-column .field select,
+    .form-column .field textarea {
+        font-size: 13px;
+    }
+
+    .privacy-consent {
+        padding: 12px;
+    }
+}
