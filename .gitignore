@@ -1,0 +1,11 @@
+# Composer dependencies
+/vendor/
+
+# Private email configuration
+/config/mail.php
+
+# Local environment settings
+.env
+
+# Temporary testing files
+/test_email.php
