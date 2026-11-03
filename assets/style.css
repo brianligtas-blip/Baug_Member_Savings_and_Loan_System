@@ -1466,3 +1466,21 @@ summary:focus-visible {
         padding: 17px;
     }
 }
+.required {
+    color: #dc2626;
+    font-weight: bold;
+}
+
+.optional {
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.error-message {
+    display: block;
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 5px;
+}

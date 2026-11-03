@@ -315,6 +315,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':sec_a3' => $hashedAnswers[2]
                 ]);
 
+                if ($insertStmt->rowCount() === 1) {
+                    error_log("BAUG: New member account inserted successfully. ID: " . $pdo->lastInsertId());
+                }
+
                 $success = 'Your BAUG account has been registered successfully. Your account is pending approval and email verification.';
                 $old = [];
 
@@ -382,14 +386,14 @@ function field_error($errors, $key) {
             <div class="form-column">
 
                 <div class="form-group">
-                    <label for="first_name">First Name *</label>
+                    <label for="first_name">First Name <span class="required">*</span></label>
                     <input type="text" id="first_name" name="first_name"
                         maxlength="25" required value="<?= old_value('first_name') ?>">
                     <?php field_error($errors, 'first_name'); ?>
                 </div>
 
                 <div class="form-group">
-                    <label for="middle_name">Middle Name</label>
+                    <label for="middle_name">Middle Name <span class="optional">Optional</span></label>
                     <input type="text" id="middle_name" name="middle_name"
                         maxlength="25" value="<?= old_value('middle_name') ?>">
                     <?php field_error($errors, 'middle_name'); ?>
@@ -411,8 +415,7 @@ function field_error($errors, $key) {
 
                 <div class="form-group">
                     <label for="id_number">Member ID Number *</label>
-                    <input type="text" id="id_number" name="id_number"
-                        placeholder="1234-5678" required value="<?= old_value('id_number') ?>">
+                    <input type="text" id="id_number" name="id_number"placeholder="xxxx-xxxx" required value="<?= old_value('id_number') ?>">
                     <?php field_error($errors, 'id_number'); ?>
                 </div>
 
