@@ -620,26 +620,53 @@ function field_error($errors, $key) {
             </div>
         </section>
 
-        <!-- PRIVACY CONSENT -->
-        <section class="form-section">
+        <div class="privacy-consent" id="privacy-consent">
+            <label class="checkbox-field">
+                <input
+                    type="checkbox"
+                    name="privacy_consent"
+                    value="1"
+                    required
+                    <?= !empty($_POST['privacy_consent']) ? 'checked' : '' ?>
+                >
 
-            <div class="privacy-consent">
+                <span>
+                    I have read and agree to the
+                    <a href="privacy.php"
+                        target="_blank"
+                        class="privacy-link">
+                    Privacy Notice
+                    </a>.
+                </span>
+            </label>
+        </div>
 
-                <label>
-                    <input type="checkbox"
-                        name="privacy_consent"
-                        value="1"
-                        required
-                        <?= isset($old['privacy_consent']) ? 'checked' : '' ?>>
 
-                    I have read and agree to the Privacy Notice. I consent to the collection and processing of my personal information for BAUG membership and account management purposes.
-                </label>
+                <!-- PRIVACY CONSENT -->
+        <div class="privacy-consent" id="privacy-consent">
 
-                <?php field_error($errors, 'privacy_consent'); ?>
+            <label class="checkbox-field">
+                <input
+                    type="checkbox"
+                    name="privacy_consent"
+                    value="1"
+                    required
+                    <?= !empty($_POST['privacy_consent']) ? 'checked' : '' ?>
+                >
 
-            </div>
+                <span>
+                    I have read and agree to the
+                    <a href="privacy.php"
+                       target="_blank"
+                       class="privacy-link">
+                        Privacy Notice
+                    </a>.
+                </span>
+            </label>
 
-        </section>
+            <?php field_error($errors, 'privacy_consent'); ?>
+
+        </div>
 
         <!-- FORM BUTTONS -->
         <div class="form-actions">
