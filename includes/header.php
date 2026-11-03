@@ -87,5 +87,5 @@ $pageTitle = $pageTitle ?? 'Baug Member Savings and Loan System';
     </nav>
 
 </header>
-</body>
-</html>
+
+<main class="page-content"></main>

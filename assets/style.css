@@ -1408,183 +1408,173 @@ html {
     border-top: 1px solid #e0e8e2;
 }
 
-/* =====================================================
-   REGISTRATION FORM - ADDITIONAL STYLING
-   Keeps the existing green and white design
-===================================================== */
 
-/* Password visibility button */
-.password-field {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+/* ==========================================
+   BAUG REGISTRATION FORM - ADDITIONAL CSS
+   Preserves the existing design
+========================================== */
+
+/* Form input consistency */
+.registration-card input,
+.registration-card select,
+.registration-card textarea {
+    box-sizing: border-box;
+    max-width: 100%;
+    font-family: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.password-field input {
-    flex: 1;
-    min-width: 0;
+/* Focus state for form fields */
+.registration-card input:focus,
+.registration-card select:focus,
+.registration-card textarea:focus {
+    outline: none;
+    border-color: #087c43;
+    box-shadow: 0 0 0 3px rgba(8, 124, 67, 0.12);
 }
 
-.password-toggle {
-    flex-shrink: 0;
-    padding: 8px 10px;
-    border: 1px solid #cbd9df;
-    border-radius: 6px;
-    background: #f1f8f3;
-    color: #075b37;
-    cursor: pointer;
-}
-
-.password-toggle:hover {
-    background: #d9f0df;
-}
-
-/* Password strength indicator */
-.password-strength {
-    width: 100%;
-    height: 7px;
-    margin-top: 7px;
-    overflow: hidden;
-    background: #e5ece7;
-    border-radius: 10px;
-}
-
-.password-strength-bar {
-    width: 0;
-    height: 100%;
-    border-radius: 10px;
-    transition: width 0.25s ease;
-}
-
-/* Password strength labels */
-.password-strength-text {
-    display: block;
-    margin-top: 5px;
-    font-size: 12px;
+/* Read-only security question fields */
+.registration-card input[readonly] {
+    background-color: #f4f8f5;
     color: #557264;
+    cursor: default;
 }
 
-/* Username availability message */
-.username-status,
-.email-status {
+/* Required and optional labels */
+.registration-card .required {
+    color: #dc3545;
+}
+
+.registration-card .optional {
+    color: #7b8b82;
+    font-size: 12px;
+}
+
+/* Field validation messages */
+.registration-card .field-error {
     display: block;
     margin-top: 5px;
+    color: #dc3545;
     font-size: 12px;
     line-height: 1.4;
 }
 
-.username-status.available,
-.email-status.available {
-    color: #087c43;
-}
-
-.username-status.taken,
-.email-status.taken {
-    color: #dc2626;
-}
-
-/* Password requirement list */
-.password-requirements {
-    margin-top: 8px;
-    padding-left: 20px;
-    color: #71887c;
-    font-size: 12px;
-    line-height: 1.7;
-}
-
-.password-requirements li.valid {
-    color: #087c43;
-}
-
-/* Security questions */
-.security-question-group {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.security-question-group .field {
-    width: 100%;
-}
-
-/* Date and number inputs */
-.form-column .field input[type="date"],
-.form-column .field input[type="number"] {
-    cursor: pointer;
-}
-
-/* Consent checkbox validation */
-.checkbox-field input:focus {
-    outline: 2px solid rgba(8, 124, 67, 0.25);
-    outline-offset: 3px;
-}
-
-/* Disabled submit button */
-.btn:disabled,
-.form-column button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Server-side validation feedback */
-.field input.invalid,
-.field select.invalid,
-.field textarea.invalid {
-    border-color: #dc2626;
-    background: #fffafa;
-}
-
-.field input.valid,
-.field select.valid {
-    border-color: #087c43;
-}
-
-/* Form messages */
-.form-message {
-    width: 100%;
+/* General error and success messages */
+.registration-card .error,
+.registration-card .success {
     padding: 12px 15px;
     margin-bottom: 15px;
-    border-radius: 7px;
-    font-size: 13px;
+    border-radius: 6px;
     line-height: 1.5;
 }
 
-.form-message.error {
-    background: #ffe8e8;
-    color: #a32121;
+/* Security question spacing */
+.registration-card .register-columns {
+    align-items: start;
 }
 
-.form-message.success {
-    background: #e2f7e8;
-    color: #075b37;
+.registration-card .form-column {
+    min-width: 0;
 }
 
-/* Registration form on smaller screens */
+/* Privacy consent checkbox */
+.registration-card .privacy-consent {
+    line-height: 1.6;
+}
+
+.registration-card .privacy-consent input[type="checkbox"] {
+    width: auto;
+    max-width: none;
+    accent-color: #087c43;
+    cursor: pointer;
+}
+
+/* Form buttons */
+.registration-card .form-actions .btn {
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.registration-card .form-actions .btn:hover {
+    opacity: 0.9;
+}
+
+.registration-card .form-actions .btn:active {
+    transform: scale(0.98);
+}
+
+/* Keyboard accessibility */
+.registration-card a:focus-visible,
+.registration-card button:focus-visible,
+.registration-card input:focus-visible,
+.registration-card select:focus-visible {
+    outline: 2px solid #087c43;
+    outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .registration-card {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .registration-card .register-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .registration-card .form-column {
+        width: 100%;
+    }
+
+    .registration-card .form-actions {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .registration-card .form-actions .btn {
+        flex: 1;
+        min-width: 120px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .registration-card {
+        padding: 18px;
+    }
+}
 @media (max-width: 480px) {
     .registration-card {
         padding: 18px 14px;
     }
 
-    .section-title {
+    .registration-card .section-title {
         gap: 8px;
         margin-bottom: 20px;
     }
 
-    .section-title span {
-        font-size: 21px;
-    }
-
-    .section-title h1 {
+    .registration-card .section-title h1 {
         font-size: 17px;
     }
 
-    .form-column .field input,
-    .form-column .field select,
-    .form-column .field textarea {
-        font-size: 13px;
+    .registration-card .section-title span {
+        font-size: 21px;
     }
 
-    .privacy-consent {
+    .registration-card .form-column {
+        gap: 14px;
+    }
+
+    .registration-card .form-actions {
+        flex-direction: column;
+    }
+
+    .registration-card .form-actions .btn {
+        width: 100%;
+    }
+
+    .registration-card .privacy-consent {
         padding: 12px;
     }
 }
