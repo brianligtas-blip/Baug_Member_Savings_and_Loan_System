@@ -1,10 +1,8 @@
-
 /* =====================================================
    BAUG MEMBER SAVINGS AND LOAN SYSTEM
    GREEN AND WHITE THEME
 ===================================================== */
 
-/* GLOBAL */
 * {
     margin: 0;
     padding: 0;
@@ -123,15 +121,34 @@ main.page-content {
     background: #d9f0df;
 }
 
-.public-header .public-nav .logout-nav,
-.public-header .public-nav .login-nav {
+/* LOG-OUT BUTTON ONLY */
+.public-header .public-nav .logout-nav {
     background: #087c43;
     color: white;
 }
 
+.public-header .public-nav .logout-nav:hover {
+    background: #056331;
+}
+
+/* LOG-IN SHOULD MATCH HOME AND REGISTER */
+.public-header .public-nav .login-nav {
+    background: transparent;
+    color: #075b37;
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 6px;
+}
+
+.public-header .public-nav .login-nav:hover {
+    background: #d9f0df;
+    color: #075b37;
+}
+
 .public-header .public-nav .logout-nav:hover,
 .public-header .public-nav .login-nav:hover {
-    background: #056331;
+    background: #d9f0df;
 }
 
 /* =====================================================

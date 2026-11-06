@@ -82,7 +82,8 @@ require 'includes/header.php';
     <main class="app-content">
 
         <h1 class="dashboard-heading">
-            <span class="title-icon">🏛️</span> Loan Management
+            <class="title-icon">
+             Loan Management
         </h1>
 
         <?php if ($message): ?>

@@ -1,4 +1,3 @@
-
 <?php
 require_once __DIR__ . '/functions.php';
 
@@ -38,7 +37,7 @@ $pageTitle = $pageTitle ?? 'Baug Member Savings and Loan System';
 <header class="public-header">
 
     <!-- LOGO AND SYSTEM NAME -->
-    <a href="<?= e($isLoggedIn ? $homeUrl : 'index.php') ?>"
+    <a href="<?= e($isLoggedIn ? $homeUrl : 'home.php') ?>"
        class="brand">
 
         <img
@@ -68,17 +67,17 @@ $pageTitle = $pageTitle ?? 'Baug Member Savings and Loan System';
 
         <?php elseif ($currentPage === 'login.php'): ?>
 
-            <a href="index.php">Home</a>
+            <a href="home.php">Home</a>
             <a href="register.php">Register</a>
 
         <?php elseif ($currentPage === 'register.php'): ?>
 
-            <a href="index.php">Home</a>
+            <a href="home.php">Home</a>
             <a href="login.php">Log-in</a>
 
         <?php else: ?>
 
-            <a href="index.php">Home</a>
+            <a href="home.php">Home</a>
             <a href="register.php">Register</a>
             <a href="login.php" class="login-nav">Log-in</a>
 

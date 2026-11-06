@@ -1,4 +1,3 @@
-
 <?php
 require_once 'includes/functions.php';
 require_admin();
@@ -88,10 +87,6 @@ require 'includes/header.php';
                 <h1 class="page-title">
                     Reports & Activities
                 </h1>
-
-                <p class="muted">
-                    View transaction summaries and monitor member activities.
-                </p>
             </div>
         </div>
 
@@ -105,7 +100,6 @@ require 'includes/header.php';
         <section class="stats-grid">
 
             <div class="stat green-stat">
-                <span>📊</span>
                 <strong>
                     <?= number_format((int)$summary['total_transactions']) ?>
                 </strong>
@@ -113,7 +107,6 @@ require 'includes/header.php';
             </div>
 
             <div class="stat blue-stat">
-                <span>💰</span>
                 <strong>
                     <?= e(money($summary['total_deposits'])) ?>
                 </strong>
@@ -121,7 +114,6 @@ require 'includes/header.php';
             </div>
 
             <div class="stat purple-stat">
-                <span>💸</span>
                 <strong>
                     <?= e(money($summary['total_withdrawals'])) ?>
                 </strong>

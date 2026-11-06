@@ -1,19 +1,8 @@
-
 <?php
 require_once 'includes/functions.php';
 require_admin();
 
 require_once 'config/database.php';
-
-/* ESCAPE OUTPUT */
-function esc($value)
-{
-    return htmlspecialchars(
-        (string)($value ?? ''),
-        ENT_QUOTES,
-        'UTF-8'
-    );
-}
 
 $message = '';
 $error = '';
@@ -155,9 +144,6 @@ require 'includes/header.php';
         <div class="dashboard-heading">
             <div>
                 <h1 class="page-title">Manage Members</h1>
-                <p class="muted">
-                    View, search, and manage registered BAUG member accounts.
-                </p>
             </div>
         </div>
 
@@ -178,7 +164,6 @@ require 'includes/header.php';
         <!-- MEMBER SUMMARY -->
         <section class="stats-grid">
             <div class="stat green-stat">
-                <span>👥</span>
                 <strong><?= count($members) ?></strong>
                 <small>Members Found</small>
             </div>

@@ -1,4 +1,3 @@
-
 <?php
 require_once 'includes/functions.php';
 require_login();
@@ -96,7 +95,8 @@ require 'includes/header.php';
     <main class="app-content">
 
         <h1 class="dashboard-heading">
-            <span class="title-icon">⌂</span> Member Dashboard
+            <span class="title-icon"> 
+                Member Dashboard
         </h1>
 
         <!-- STAT CARDS -->
@@ -104,8 +104,6 @@ require 'includes/header.php';
 
             <!-- Savings Balance -->
             <div class="proto-card proto-green">
-                <div class="stat-icon">🐷</div>
-
                 <div class="stat-details">
                     <strong><?= money($balance) ?></strong>
                     <small>Savings Balance</small>
@@ -114,21 +112,16 @@ require 'includes/header.php';
 
             <!-- Pending Loan -->
             <div class="proto-card proto-blue">
-                <div class="stat-icon">📄</div>
-
                 <div class="stat-details">
-                    <span class="card-label">Pending Loan</span>
                     <strong><?= money($pendingLoan) ?></strong>
+                    <span class="card-label">Pending Loan</span>
                 </div>
             </div>
 
             <!-- Member Since -->
             <div class="proto-card proto-purple">
-                <div class="stat-icon">🤝</div>
-
                 <div class="stat-details">
                     <span class="card-label">Member Since</span>
-
                     <strong>
                         <?= !empty($member['created_at'])
                             ? date('M Y', strtotime($member['created_at']))
@@ -213,17 +206,17 @@ require 'includes/header.php';
                 <div class="action-buttons">
 
                     <a href="savings.php" class="btn-action green-act">
-                        <span class="act-icon">＋</span>
+                        <class="act-icon">
                         Deposit Savings
                     </a>
 
                     <a href="loans.php" class="btn-action blue-act">
-                        <span class="act-icon">📄</span>
+                        <class="act-icon">
                         Apply for Loan
                     </a>
 
                     <a href="transactions.php" class="btn-action purple-act">
-                        <span class="act-icon">🕒</span>
+                        <class="act-icon">
                         View History
                     </a>
 

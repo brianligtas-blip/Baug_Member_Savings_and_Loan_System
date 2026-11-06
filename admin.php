@@ -70,7 +70,7 @@ require 'includes/header.php';
         <!-- PAGE TITLE -->
 
         <h1 class="page-title">
-            <span>▥</span> Admin Dashboard
+            Admin Dashboard
         </h1>
 
         <p class="muted">
@@ -83,7 +83,6 @@ require 'includes/header.php';
         <section class="stats-grid">
 
             <div class="stat green-stat">
-                <span>👥</span>
 
                 <strong>
                     <?= number_format($members) ?>
@@ -93,7 +92,6 @@ require 'includes/header.php';
             </div>
 
             <div class="stat blue-stat">
-                <span>📄</span>
 
                 <strong>
                     <?= number_format($pendingLoans) ?>
@@ -103,7 +101,6 @@ require 'includes/header.php';
             </div>
 
             <div class="stat purple-stat">
-                <span>🪙</span>
 
                 <strong>
                     <?= e(money($totalSavings)) ?>
@@ -180,11 +177,11 @@ require 'includes/header.php';
                 <h2>Quick Actions</h2>
 
                 <a href="loans.php" class="quick-action blue-action">
-                    📄 &nbsp; Review Loans
+                    Review Loans
                 </a>
 
                 <a href="transactions.php" class="quick-action">
-                    💰 &nbsp; View Transactions
+                    View Transactions
                 </a>
 
             </div>

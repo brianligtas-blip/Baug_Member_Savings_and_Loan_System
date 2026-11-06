@@ -6,6 +6,20 @@
 
 # Local environment settings
 .env
+.env.*
+
+# Logs
+*.log
+/storage/logs/
 
 # Temporary testing files
 /test_email.php
+
+# Temporary and backup files
+*.tmp
+*.bak
+*.old
+
+# Operating system files
+.DS_Store
+Thumbs.db

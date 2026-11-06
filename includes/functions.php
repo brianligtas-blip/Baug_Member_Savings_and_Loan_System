@@ -1,4 +1,3 @@
-
 <?php
 
 /*
@@ -110,7 +109,7 @@ function require_login() {
 
     if (!is_logged_in()) {
 
-        header('Location: index.php');
+        header('Location: home.php');
         exit;
     }
 

@@ -1,4 +1,3 @@
-
 <?php
 require_once 'includes/functions.php';
 require_login();
@@ -144,7 +143,7 @@ require 'includes/header.php';
     <main class="app-content">
 
         <h1 class="dashboard-heading">
-            <span class="title-icon">👤</span> My Profile
+            <class="title-icon"> My Profile
         </h1>
 
         <?php if ($message): ?>

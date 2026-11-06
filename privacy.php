@@ -173,12 +173,19 @@ session_start();
     </p>
 
     <h2>5. Data Retention</h2>
+
     <p>
-        Personal information will be retained only for as long as
-        necessary for the purposes for which it was collected,
-        subject to applicable legal, accounting, and organizational
-        requirements. The organization should establish and follow
-        an appropriate retention and secure disposal policy.
+        BAUG will retain members' personal information, savings records,
+        loan records, and transaction history only for as long as necessary
+        to fulfill their intended purposes and applicable legal,
+        accounting, and organizational requirements.
+    </p>
+
+    <p>
+        Records will be periodically reviewed to determine whether
+        continued retention is necessary. When information is no longer
+        required and there is no legal reason to retain it, it will be
+        securely disposed of or anonymized.
     </p>
 
     <h2>6. Your Data Privacy Rights</h2>
@@ -190,13 +197,29 @@ session_start();
         to the conditions and limitations of the law.
     </p>
 
+    
     <h2>7. Contact Information</h2>
+
     <p>
-        For questions, requests, or concerns about the handling
-        of your personal information, please contact the
-        authorized BAUG representative or designated privacy
-        contact.
+        For questions, requests, or concerns regarding the
+        collection, processing, storage, or protection of your
+        personal information, you may contact BAUG through
+        its official email address:
     </p>
+
+    <p>
+        <strong>Official BAUG Email:</strong>
+        <a href="mailto:ligtasbrian659@gmail.com">
+            ligtasbrian659@gmail.com
+        </a>
+    </p>
+
+    <p>
+        Members may use this email address to submit privacy-related
+        inquiries, request access to their personal information,
+        or raise concerns about how their data is handled.
+        </p>
+
 
     <h2>8. Consent</h2>
     <p>

@@ -47,7 +47,9 @@ require 'includes/header.php';
     <main class="app-content">
 
         <h1 class="dashboard-heading">
-            <span class="title-icon">🕒</span> Transaction History
+            <class="title-icon"> 
+                Transaction History
+            </class>
         </h1>
 
         <!-- FILTER FORM -->

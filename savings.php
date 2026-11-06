@@ -90,13 +90,12 @@ require 'includes/header.php';
     <main class="app-content">
 
         <h1 class="dashboard-heading">
-            <span class="title-icon">🐷</span> My Savings
+            <class="title-icon"> My Savings
         </h1>
 
         <!-- CURRENT BALANCE BANNER -->
         <div class="proto-card proto-green" style="margin-bottom: 25px; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 20px;">
-                <div style="font-size: 36px;">🪙</div>
                 <div>
                     <small style="text-transform: uppercase; letter-spacing: 1px;">Current Balance</small>
                     <strong style="font-size: 30px; display: block;"><?= money($balance) ?></strong>
