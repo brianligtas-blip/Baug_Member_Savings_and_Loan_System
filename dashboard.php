@@ -1,11 +1,17 @@
+
 <?php
+
 require_once 'includes/functions.php';
 require_login();
+
 require_once 'config/database.php';
 
 $userId = current_user()['id'];
 
-// 1. Savings Balance
+/* =========================================
+   1. SAVINGS BALANCE
+========================================= */
+
 $balance = 0.00;
 
 try {
@@ -27,27 +33,34 @@ try {
     $balance = (float) $stmt->fetchColumn();
 
 } catch (PDOException $e) {
-    $balance = 0.00;
+    error_log('Dashboard savings balance error: ' . $e->getMessage());
 }
 
-// 2. Pending Loans
+/* =========================================
+   2. PENDING LOANS
+========================================= */
+
 $pendingLoan = 0.00;
 
 try {
     $stmt = $pdo->prepare("
         SELECT COALESCE(SUM(amount), 0)
         FROM loans
-        WHERE user_id = ? AND status = 'Pending'
+        WHERE user_id = ?
+        AND status = 'Pending'
     ");
 
     $stmt->execute([$userId]);
     $pendingLoan = (float) $stmt->fetchColumn();
 
 } catch (PDOException $e) {
-    $pendingLoan = 0.00;
+    error_log('Dashboard pending loans error: ' . $e->getMessage());
 }
 
-// 3. Member Registration Date
+/* =========================================
+   3. MEMBER REGISTRATION DATE
+========================================= */
+
 $member = null;
 
 try {
@@ -61,10 +74,13 @@ try {
     $member = $stmt->fetch(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
-    $member = null;
+    error_log('Dashboard member information error: ' . $e->getMessage());
 }
 
-// 4. Recent Transactions
+/* =========================================
+   4. RECENT TRANSACTIONS
+========================================= */
+
 $transactions = [];
 
 try {
@@ -80,12 +96,17 @@ try {
     $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
-    $transactions = [];
+    error_log('Dashboard transactions error: ' . $e->getMessage());
 }
+
+/* =========================================
+   PAGE CONFIGURATION
+========================================= */
 
 $pageTitle = 'Member Dashboard';
 
 require 'includes/header.php';
+
 ?>
 
 <div class="app-layout">
@@ -94,55 +115,70 @@ require 'includes/header.php';
 
     <main class="app-content">
 
+        <!-- PAGE HEADING -->
         <h1 class="dashboard-heading">
-            <span class="title-icon"> 
-                Member Dashboard
+            <span class="title-icon">
+                <i class="fas fa-chart-line"></i>
+            </span>
+            Member Dashboard
         </h1>
 
         <!-- STAT CARDS -->
         <section class="proto-stats-grid">
 
-            <!-- Savings Balance -->
+            <!-- SAVINGS BALANCE -->
             <div class="proto-card proto-green">
+
                 <div class="stat-details">
                     <strong><?= money($balance) ?></strong>
                     <small>Savings Balance</small>
                 </div>
+
             </div>
 
-            <!-- Pending Loan -->
+            <!-- PENDING LOAN -->
             <div class="proto-card proto-blue">
+
                 <div class="stat-details">
                     <strong><?= money($pendingLoan) ?></strong>
                     <span class="card-label">Pending Loan</span>
                 </div>
+
             </div>
 
-            <!-- Member Since -->
+            <!-- MEMBER SINCE -->
             <div class="proto-card proto-purple">
+
                 <div class="stat-details">
+
                     <span class="card-label">Member Since</span>
+
                     <strong>
                         <?= !empty($member['created_at'])
                             ? date('M Y', strtotime($member['created_at']))
                             : 'Not available' ?>
                     </strong>
+
                 </div>
+
             </div>
 
         </section>
 
-        <!-- MAIN 2-COLUMN SECTION -->
+        <!-- MAIN CONTENT GRID -->
         <section class="proto-content-grid">
 
             <!-- RECENT TRANSACTIONS -->
             <div class="proto-box">
 
                 <div class="proto-box-head">
+
                     <h2>Recent Transactions</h2>
+
                     <a href="transactions.php" class="view-all">
                         View All →
                     </a>
+
                 </div>
 
                 <div class="transaction-list">
@@ -150,6 +186,7 @@ require 'includes/header.php';
                     <?php if (empty($transactions)): ?>
 
                         <div class="tx-row">
+
                             <div class="tx-type">
                                 No transactions yet
                             </div>
@@ -159,6 +196,7 @@ require 'includes/header.php';
                                     Your transactions will appear here.
                                 </small>
                             </div>
+
                         </div>
 
                     <?php else: ?>
@@ -168,11 +206,19 @@ require 'includes/header.php';
                             <div class="tx-row">
 
                                 <div class="tx-type">
-                                    <?= ($tx['transaction_type'] ?? '') === 'Deposit'
-                                        ? '↓ Deposit'
-                                        : (($tx['transaction_type'] ?? '') === 'Withdrawal'
-                                            ? '↑ Withdrawal'
-                                            : '📄 ' . e($tx['transaction_type'] ?? 'Transaction')) ?>
+
+                                    <?php
+                                    $type = $tx['transaction_type'] ?? 'Transaction';
+
+                                    if ($type === 'Deposit') {
+                                        echo '↓ Deposit';
+                                    } elseif ($type === 'Withdrawal') {
+                                        echo '↑ Withdrawal';
+                                    } else {
+                                        echo '📄 ' . e($type);
+                                    }
+                                    ?>
+
                                 </div>
 
                                 <div class="tx-amount">
@@ -196,6 +242,7 @@ require 'includes/header.php';
                     <?php endif; ?>
 
                 </div>
+
             </div>
 
             <!-- QUICK ACTIONS -->
@@ -206,21 +253,28 @@ require 'includes/header.php';
                 <div class="action-buttons">
 
                     <a href="savings.php" class="btn-action green-act">
-                        <class="act-icon">
-                        Deposit Savings
+
+                        <i class="fas fa-piggy-bank act-icon"></i>
+                        <span>Deposit Savings</span>
+
                     </a>
 
                     <a href="loans.php" class="btn-action blue-act">
-                        <class="act-icon">
-                        Apply for Loan
+
+                        <i class="fas fa-hand-holding-usd act-icon"></i>
+                        <span>Apply for Loan</span>
+
                     </a>
 
                     <a href="transactions.php" class="btn-action purple-act">
-                        <class="act-icon">
-                        View History
+
+                        <i class="fas fa-history act-icon"></i>
+                        <span>View History</span>
+
                     </a>
 
                 </div>
+
             </div>
 
         </section>
