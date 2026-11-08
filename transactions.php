@@ -1,4 +1,3 @@
-
 <?php
 
 require_once 'includes/functions.php';
@@ -120,7 +119,7 @@ require 'includes/header.php';
 
 ?>
 
-<div class="app-layout">
+<div class="app-layout member-dashboard">
 
     <?php require 'includes/sidebar.php'; ?>
 
@@ -262,7 +261,7 @@ require 'includes/header.php';
                             </th>
 
                             <th style="padding: 12px 15px; text-align: center;">
-                                Status
+                                Reference Number
                             </th>
 
                         </tr>
@@ -302,14 +301,8 @@ require 'includes/header.php';
                                     </td>
 
                                     <!-- STATUS -->
-                                    <td style="padding: 14px 15px; text-align: center;">
-
-                                        <span style="background: #e2f7e8; color: #075b37; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block;">
-
-                                            <?= e($tx['status'] ?? 'Completed') ?>
-
-                                        </span>
-
+                                    <td style="padding: 14px 15px; text-align: center; color: #53665b; font-size: 12px;">
+                                        <?= e($tx['reference_no'] ?? 'Unavailable') ?>
                                     </td>
 
                                 </tr>

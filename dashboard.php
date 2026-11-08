@@ -1,4 +1,3 @@
-
 <?php
 
 require_once 'includes/functions.php';
@@ -109,94 +108,69 @@ require 'includes/header.php';
 
 ?>
 
-<div class="app-layout">
+<div class="app-layout member-dashboard">
 
     <?php require 'includes/sidebar.php'; ?>
 
     <main class="app-content">
 
         <!-- PAGE HEADING -->
-        <h1 class="dashboard-heading">
-            <span class="title-icon">
-                <i class="fas fa-chart-line"></i>
-            </span>
-            Member Dashboard
-        </h1>
+        <div class="dashboard-page-header">
+            <h1 class="dashboard-heading">Member Dashboard</h1>
+            <p>Overview of your savings and loan activities.</p>
+        </div>
 
-        <!-- STAT CARDS -->
+        <!-- STATISTICS -->
         <section class="proto-stats-grid">
 
-            <!-- SAVINGS BALANCE -->
-            <div class="proto-card proto-green">
-
+            <div class="proto-card">
                 <div class="stat-details">
+                    <span class="card-label">Savings Balance</span>
                     <strong><?= money($balance) ?></strong>
-                    <small>Savings Balance</small>
                 </div>
-
             </div>
 
-            <!-- PENDING LOAN -->
-            <div class="proto-card proto-blue">
-
+            <div class="proto-card">
                 <div class="stat-details">
-                    <strong><?= money($pendingLoan) ?></strong>
                     <span class="card-label">Pending Loan</span>
+                    <strong><?= money($pendingLoan) ?></strong>
                 </div>
-
             </div>
 
-            <!-- MEMBER SINCE -->
-            <div class="proto-card proto-purple">
-
+            <div class="proto-card">
                 <div class="stat-details">
-
                     <span class="card-label">Member Since</span>
-
                     <strong>
                         <?= !empty($member['created_at'])
                             ? date('M Y', strtotime($member['created_at']))
                             : 'Not available' ?>
                     </strong>
-
                 </div>
-
             </div>
 
         </section>
 
-        <!-- MAIN CONTENT GRID -->
+        <!-- MAIN CONTENT -->
         <section class="proto-content-grid">
 
             <!-- RECENT TRANSACTIONS -->
             <div class="proto-box">
 
                 <div class="proto-box-head">
-
                     <h2>Recent Transactions</h2>
 
                     <a href="transactions.php" class="view-all">
-                        View All →
+                        View All
                     </a>
-
                 </div>
 
                 <div class="transaction-list">
 
                     <?php if (empty($transactions)): ?>
 
-                        <div class="tx-row">
-
-                            <div class="tx-type">
-                                No transactions yet
-                            </div>
-
-                            <div class="tx-amount">
-                                <small>
-                                    Your transactions will appear here.
-                                </small>
-                            </div>
-
+                        <div class="tx-empty">
+                            <strong>No transactions yet</strong>
+                            <small>Your transactions will appear here.</small>
                         </div>
 
                     <?php else: ?>
@@ -206,19 +180,7 @@ require 'includes/header.php';
                             <div class="tx-row">
 
                                 <div class="tx-type">
-
-                                    <?php
-                                    $type = $tx['transaction_type'] ?? 'Transaction';
-
-                                    if ($type === 'Deposit') {
-                                        echo '↓ Deposit';
-                                    } elseif ($type === 'Withdrawal') {
-                                        echo '↑ Withdrawal';
-                                    } else {
-                                        echo '📄 ' . e($type);
-                                    }
-                                    ?>
-
+                                    <?= e($tx['transaction_type'] ?? 'Transaction') ?>
                                 </div>
 
                                 <div class="tx-amount">
@@ -252,25 +214,16 @@ require 'includes/header.php';
 
                 <div class="action-buttons">
 
-                    <a href="savings.php" class="btn-action green-act">
-
-                        <i class="fas fa-piggy-bank act-icon"></i>
-                        <span>Deposit Savings</span>
-
+                    <a href="savings.php" class="btn-action">
+                        Deposit Savings
                     </a>
 
-                    <a href="loans.php" class="btn-action blue-act">
-
-                        <i class="fas fa-hand-holding-usd act-icon"></i>
-                        <span>Apply for Loan</span>
-
+                    <a href="loans.php" class="btn-action">
+                        Apply for Loan
                     </a>
 
-                    <a href="transactions.php" class="btn-action purple-act">
-
-                        <i class="fas fa-history act-icon"></i>
-                        <span>View History</span>
-
+                    <a href="transactions.php" class="btn-action">
+                        View Transaction History
                     </a>
 
                 </div>

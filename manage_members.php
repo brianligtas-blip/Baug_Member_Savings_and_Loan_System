@@ -134,9 +134,90 @@ $pageTitle = 'Manage Members';
 require 'includes/header.php';
 ?>
 
+<style>
+/* Layout for registered members section header */
+.card-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.card-title-group h2 {
+    margin: 0;
+}
+
+.card-title-group p {
+    margin: 4px 0 0 0;
+}
+
+/* Form styling on the right side */
+.member-search-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.member-search-right input[type="text"] {
+    padding: 10px 14px;
+    border: 1px solid #c8d6cd;
+    border-radius: 8px;
+    min-width: 340px;
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.member-search-right input[type="text"]:focus {
+    border-color: #007a3d;
+}
+
+.member-search-right .btn-search-nav {
+    background-color: #007a3d;
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.member-search-right .btn-clear-nav {
+    background-color: #f0f4f2;
+    color: #1a1a1a;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Centered table column for Actions */
+th.text-center,
+td.text-center {
+    text-align: center;
+}
+
+.member-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+</style>
+
 <div class="app-layout">
 
-    <?php require 'includes/sidebar.php'; ?>
+    <?php require 'includes/admin_sidebar.php'; ?>
 
     <main class="app-main">
 
@@ -172,32 +253,32 @@ require 'includes/header.php';
         <!-- REGISTERED MEMBERS -->
         <section class="card members-section">
 
-            <div class="card-head">
-                <div>
+            <!-- HEADER (LEFT) AND SEARCH FORM (RIGHT) IN ONE ROW -->
+            <div class="card-header-flex">
+                <div class="card-title-group">
                     <h2>Registered Members</h2>
                     <p class="muted">
                         Search and manage member accounts.
                     </p>
                 </div>
-            </div>
 
-            <!-- SEARCH FORM -->
-            <form
-                method="GET"
-                action="manage_members.php"
-                class="member-search"
-            >
-                <input
-                    type="text"
-                    name="search"
-                    placeholder="Search name, member ID, email or username"
-                    value="<?= esc($search) ?>"
+                <form
+                    method="GET"
+                    action="manage_members.php"
+                    class="member-search-right"
                 >
+                    <input
+                        type="text"
+                        name="search"
+                        placeholder="Search name, member ID, email or username"
+                        value="<?= esc($search) ?>"
+                    >
 
-                <button type="submit">Search</button>
+                    <button type="submit" class="btn-search-nav">Search</button>
 
-                <a href="manage_members.php">Clear</a>
-            </form>
+                    <a href="manage_members.php" class="btn-clear-nav">Clear</a>
+                </form>
+            </div>
 
             <!-- MEMBERS TABLE -->
             <div class="table-wrap">
@@ -211,7 +292,7 @@ require 'includes/header.php';
                             <th>Category</th>
                             <th>Status</th>
                             <th>Date Registered</th>
-                            <th>Actions</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
 
@@ -262,7 +343,7 @@ require 'includes/header.php';
                                     </td>
 
                                     <!-- ACTIONS -->
-                                    <td>
+                                    <td class="text-center">
                                         <div class="member-actions">
 
                                             <!-- VIEW BUTTON -->

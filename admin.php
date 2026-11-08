@@ -61,9 +61,49 @@ $pageTitle = 'Admin Dashboard';
 require 'includes/header.php';
 ?>
 
+<style>
+/* Layout for Recent Transactions */
+.list-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f2f5;
+    gap: 16px;
+}
+
+.list-row:last-child {
+    border-bottom: none;
+}
+
+.transaction-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.transaction-details strong {
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.transaction-details small {
+    color: #4b5563;
+}
+
+/* Force date to stay on the far right in a single line */
+.transaction-date {
+    white-space: nowrap;
+    color: #6b7280;
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+</style>
+
 <div class="app-layout">
 
-    <?php require 'includes/sidebar.php'; ?>
+    <?php require 'includes/admin_sidebar.php'; ?>
 
     <main class="app-main">
 
@@ -74,8 +114,8 @@ require 'includes/header.php';
         </h1>
 
         <p class="muted">
-            Welcome to the BAUG Member Savings and Loan System
-            Administration Panel.
+            Monitor member accounts, loan applications, and savings transactions
+            through the BAUG Member Savings and Loan System.
         </p>
 
         <!-- DASHBOARD STATISTICS -->
@@ -88,7 +128,7 @@ require 'includes/header.php';
                     <?= number_format($members) ?>
                 </strong>
 
-                <small>Total Members</small>
+                <small>Registered Members</small>
             </div>
 
             <div class="stat blue-stat">
@@ -97,7 +137,7 @@ require 'includes/header.php';
                     <?= number_format($pendingLoans) ?>
                 </strong>
 
-                <small>Pending Loans</small>
+                <small>Pending Loan Applications</small>
             </div>
 
             <div class="stat purple-stat">
@@ -106,7 +146,7 @@ require 'includes/header.php';
                     <?= e(money($totalSavings)) ?>
                 </strong>
 
-                <small>Total Savings</small>
+                <small>Total Savings Balance</small>
             </div>
 
         </section>
@@ -121,10 +161,10 @@ require 'includes/header.php';
 
                 <div class="card-head">
 
-                    <h2>Recent Activities</h2>
+                    <h2>Recent Transactions</h2>
 
-                    <a href="transactions.php">
-                        View All →
+                    <a href="admin_transactions.php">
+                        View All &rarr;
                     </a>
 
                 </div>
@@ -132,7 +172,7 @@ require 'includes/header.php';
                 <?php if (empty($activities)): ?>
 
                     <p class="muted">
-                        No recent activities found.
+                        No transactions have been recorded yet.
                     </p>
 
                 <?php else: ?>
@@ -141,26 +181,26 @@ require 'includes/header.php';
 
                         <div class="list-row">
 
-                            <div>
+                            <div class="transaction-details">
 
                                 <strong>
                                     <?= e($activity['full_name']) ?>
                                 </strong>
 
                                 <small>
-                                    <?= e($activity['transaction_type']) ?>
-                                    —
+                                    <?= e(ucfirst($activity['transaction_type'])) ?>
+                                    &mdash;
                                     <?= e(money($activity['amount'])) ?>
                                 </small>
 
                             </div>
 
-                            <small>
+                            <span class="transaction-date">
                                 <?= e(date(
                                     'M d, Y',
                                     strtotime($activity['created_at'])
                                 )) ?>
-                            </small>
+                            </span>
 
                         </div>
 
@@ -176,12 +216,12 @@ require 'includes/header.php';
 
                 <h2>Quick Actions</h2>
 
-                <a href="loans.php" class="quick-action blue-action">
-                    Review Loans
+                <a href="admin_loans.php" class="quick-action blue-action">
+                    Review Loan Applications
                 </a>
 
-                <a href="transactions.php" class="quick-action">
-                    View Transactions
+                <a href="admin_transactions.php" class="quick-action">
+                    Manage Transactions
                 </a>
 
             </div>

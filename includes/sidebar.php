@@ -1,73 +1,45 @@
 <?php
-$currentPage = basename($_SERVER['PHP_SELF']);
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-$userRole = $_SESSION['user']['role'] ?? 'member';
-$isAdmin = ($userRole === 'admin');
+$currentPage = basename($_SERVER['PHP_SELF']);
+$role = strtolower($_SESSION['role'] ?? $_SESSION['user_role'] ?? $_SESSION['user']['role'] ?? 'member');
+
+// Kon admin ang naka-login, automatic nga mag-load sa admin sidebar
+if ($role === 'admin') {
+    require __DIR__ . '/admin_sidebar.php';
+    return;
+}
 ?>
 
 <aside class="sidebar">
+    <div class="sidebar-label">MEMBER MENU</div>
+
     <nav class="sidebar-nav">
-
-        <?php if ($isAdmin): ?>
-
-            <a href="admin.php"
-               class="<?= $currentPage === 'admin.php' ? 'active' : '' ?>">
-                Dashboard
-            </a>
-
-            <a href="manage_members.php"
-                class="<?= $currentPage === 'manage_members.php' ? 'active' : '' ?>">
-                Manage Members
-            </a>
-
-            <a href="loans.php"
-               class="<?= $currentPage === 'loans.php' ? 'active' : '' ?>">
-                Loan Applications
-            </a>
-
-            <a href="transactions.php"
-               class="<?= $currentPage === 'transactions.php' ? 'active' : '' ?>">
-                Transactions
-            </a>
-
-            <a href="reports_activities.php"
-                class="<?= $currentPage === 'reports_activities.php' ? 'active' : '' ?>">
-                Reports & Activities
-            </a>
-
-        <?php else: ?>
-
-            <a href="dashboard.php"
-               class="<?= $currentPage === 'dashboard.php' ? 'active' : '' ?>">
-                Dashboard
-            </a>
-
-            <a href="savings.php"
-               class="<?= $currentPage === 'savings.php' ? 'active' : '' ?>">
-                My Savings
-            </a>
-
-            <a href="loans.php"
-               class="<?= $currentPage === 'loans.php' ? 'active' : '' ?>">
-                Loan Management
-            </a>
-
-            <a href="transactions.php"
-               class="<?= $currentPage === 'transactions.php' ? 'active' : '' ?>">
-                Transaction History
-            </a>
-
-            <a href="profile.php"
-               class="<?= $currentPage === 'profile.php' ? 'active' : '' ?>">
-                My Profile
-            </a>
-
-        <?php endif; ?>
-
-        <a href="logout.php" class="logout-link">
-            <span class="icon">⎋</span>
-            Logout
+        <a href="dashboard.php" class="<?= $currentPage === 'dashboard.php' ? 'active' : '' ?>">
+            <i class="fas fa-th-large"></i>
+            <span>Dashboard</span>
         </a>
 
+        <a href="savings.php" class="<?= $currentPage === 'savings.php' ? 'active' : '' ?>">
+            <i class="fas fa-wallet"></i>
+            <span>My Savings</span>
+        </a>
+
+        <a href="loans.php" class="<?= $currentPage === 'loans.php' ? 'active' : '' ?>">
+            <i class="fas fa-hand-holding-usd"></i>
+            <span>Loan Management</span>
+        </a>
+
+        <a href="transactions.php" class="<?= $currentPage === 'transactions.php' ? 'active' : '' ?>">
+            <i class="fas fa-history"></i>
+            <span>Transaction History</span>
+        </a>
+
+        <a href="profile.php" class="<?= $currentPage === 'profile.php' ? 'active' : '' ?>">
+            <i class="fas fa-user"></i>
+            <span>My Profile</span>
+        </a>
     </nav>
 </aside>

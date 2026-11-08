@@ -159,17 +159,23 @@ function require_login() {
 */
 
 function require_admin() {
+    // Siguroha nga naka-start ang session
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-    require_login();
+    // Kuhaa ang role gikan sa tanang posibleng session structures
+    $role = $_SESSION['role'] 
+         ?? $_SESSION['user_role'] 
+         ?? $_SESSION['user']['role'] 
+         ?? $_SESSION['user_type'] 
+         ?? '';
 
-    if (
-        !isset($_SESSION['user']['role']) ||
-        $_SESSION['user']['role'] !== 'admin'
-    ) {
-
-        http_response_code(403);
-
-        exit('Access Denied.');
+    // Check kon 'admin' ba ang role (case-insensitive para ma-accept maski 'Admin' o 'ADMIN')
+    if (strtolower(trim($role)) !== 'admin') {
+        // Kon dili admin o wala naka-login, i-redirect ngadto sa login page
+        header('Location: login.php');
+        exit;
     }
 }
 

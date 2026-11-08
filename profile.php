@@ -136,14 +136,17 @@ $pageTitle = 'My Profile';
 require 'includes/header.php';
 ?>
 
-<div class="app-layout">
+<div class="app-layout member-dashboard">
 
     <?php require 'includes/sidebar.php'; ?>
 
     <main class="app-content">
 
         <h1 class="dashboard-heading">
-            <class="title-icon"> My Profile
+            <span class="title-icon">
+                <i class="fas fa-user"></i>
+            </span>
+                My Profile
         </h1>
 
         <?php if ($message): ?>
@@ -160,9 +163,25 @@ require 'includes/header.php';
             <div class="proto-box"
                  style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:30px;">
 
-                <!-- AVATAR -->
-                <div style="width:100px; height:100px; background:#e2f7e8; color:#075b37; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:50px; margin-bottom:15px; border:3px solid #087c43;">
-                    👤
+                <!-- PROFILE AVATAR -->
+                <div style="width:125px; height:125px; display:flex; align-items:center; justify-content:center; margin-bottom:15px;">
+
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                        width="125"
+                        height="125"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#087c43"
+                        stroke-width="1"
+                        stroke-linecap="round"
+                        stroke-linejoin="round">
+
+                        <path d="M17.925 20.056a6 6 0 0 0-11.851.001"/>
+                        <circle cx="12" cy="11" r="4"/>
+                        <circle cx="12" cy="12" r="10"/>
+
+                    </svg>
+
                 </div>
 
                 <h2 style="margin-bottom:5px; color:#064b2e; font-size:20px;">

@@ -80,8 +80,8 @@ require 'includes/header.php';
 
                 <span class="field-icon">
                     <svg xmlns="http://www.w3.org/2000/svg"
-                         width="32"
-                         height="32"
+                         width="26"
+                         height="26"
                          viewBox="0 0 24 24"
                          fill="none"
                          stroke="#198754"
@@ -110,23 +110,17 @@ require 'includes/header.php';
 
                 <span class="field-icon">
                     <svg xmlns="http://www.w3.org/2000/svg"
-                         width="32"
-                         height="32"
-                         viewBox="0 0 24 24"
-                         fill="#198754"
-                         stroke="#198754"
-                         stroke-width="2"
-                         stroke-linecap="round"
-                         stroke-linejoin="round">
+                        width="26"
+                        height="26"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#198754"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round">
 
-                        <rect x="3" y="10" width="18" height="12" rx="2"></rect>
-
-                        <path d="M7 10V7a5 5 0 0 1 10 0v3"
-                              fill="none"
-                              stroke="#198754"
-                              stroke-width="2.5"></path>
-
-                        <circle cx="12" cy="16" r="1.5" fill="white"></circle>
+                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
 
                     </svg>
                 </span>

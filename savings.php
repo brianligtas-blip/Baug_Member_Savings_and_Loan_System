@@ -9,8 +9,12 @@ $messageType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+    verify_csrf();
+
     $type = $_POST['type'] ?? '';
-    $amount = (float) ($_POST['amount'] ?? 0);
+    $amountInput = trim($_POST['amount'] ?? '');
+
+    $amount = is_numeric($amountInput) ? (float) $amountInput : 0;
 
     // Get current balance using transaction_type
     $stmt = $pdo->prepare("
@@ -42,14 +46,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } else {
 
-        // FIX: Removed `status` from INSERT statement
+        $referenceNo = 'BAUG-' . strtoupper(bin2hex(random_bytes(5)));
+
         $stmt = $pdo->prepare("
             INSERT INTO transactions
-            (user_id, transaction_type, amount)
-            VALUES (?, ?, ?)
+            (user_id, transaction_type, amount, reference_no)
+            VALUES (?, ?, ?, ?)
         ");
 
-        $stmt->execute([$userId, $type, $amount]);
+        $stmt->execute([
+            $userId,
+            $type,
+            $amount,
+            $referenceNo
+        ]);
 
         $message = $type . ' transaction recorded successfully.';
         $messageType = 'success';
@@ -83,18 +93,21 @@ $pageTitle = 'My Savings';
 require 'includes/header.php';
 ?>
 
-<div class="app-layout">
+<div class="app-layout member-dashboard">
 
     <?php require 'includes/sidebar.php'; ?>
 
     <main class="app-content">
 
         <h1 class="dashboard-heading">
-            <class="title-icon"> My Savings
+            <span class="title-icon">
+                <i class="fas fa-wallet"></i>
+            </span>
+            My Savings
         </h1>
 
         <!-- CURRENT BALANCE BANNER -->
-        <div class="proto-card proto-green" style="margin-bottom: 25px; justify-content: space-between;">
+        <div class="proto-card" style="margin-bottom: 25px; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 20px;">
                 <div>
                     <small style="text-transform: uppercase; letter-spacing: 1px;">Current Balance</small>
@@ -114,6 +127,8 @@ require 'includes/header.php';
                 <h2>Make a Savings Transaction</h2>
 
                 <form method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+
+                <?= csrf_field() ?>
 
                     <div>
                         <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px;">Transaction Type</label>
@@ -157,7 +172,7 @@ require 'includes/header.php';
 
                         <div class="tx-row">
                             <div class="tx-type">
-                                <?= ($item['transaction_type'] === 'Deposit') ? '↓ Deposit' : (($item['transaction_type'] === 'Withdrawal') ? '↓ Withdrawal' : e($item['transaction_type'])) ?>
+                                <?= ($item['transaction_type'] === 'Deposit') ? '↓ Deposit' : (($item['transaction_type'] === 'Withdrawal') ? '↑ Withdrawal' : e($item['transaction_type'])) ?>
                             </div>
 
                             <div class="tx-amount">

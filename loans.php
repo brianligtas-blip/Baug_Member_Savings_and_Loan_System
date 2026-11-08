@@ -75,15 +75,17 @@ $pageTitle = 'Loan Management';
 require 'includes/header.php';
 ?>
 
-<div class="app-layout">
+<div class="app-layout member-dashboard">
 
     <?php require 'includes/sidebar.php'; ?>
 
     <main class="app-content">
 
         <h1 class="dashboard-heading">
-            <class="title-icon">
-             Loan Management
+            <span class="title-icon">
+                <i class="fas fa-hand-holding-usd"></i>
+            </span>
+            Loan Management
         </h1>
 
         <?php if ($message): ?>
@@ -101,6 +103,8 @@ require 'includes/header.php';
                 <h2>Apply for a Loan</h2>
 
                 <form method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+
+                <?= csrf_field() ?>
 
                     <div>
                         <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px;">Loan Purpose</label>
@@ -134,29 +138,46 @@ require 'includes/header.php';
             </div>
 
             <!-- LOAN STATUS CARD -->
-            <div class="proto-box" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px;">
+            <div class="proto-box" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 250px;">
 
-                <h2 style="align-self: flex-start; margin-bottom: 20px;">Loan Status</h2>
+                <!-- TOP LEFT HEADING -->
+                <h2 style="margin-bottom: 0; align-self: flex-start;">Loan Status</h2>
 
-                <?php if ($latestLoan): ?>
-                    <div style="font-size: 48px; margin-bottom: 10px;">
-                        <?= ($latestLoan['status'] ?? '') === 'Approved' ? '✅' : (($latestLoan['status'] ?? '') === 'Rejected' ? '❌' : '🛡️') ?>
-                    </div>
+                <!-- CENTERED CONTENT AREA -->
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; text-align: center; padding: 15px 0;">
 
-                    <strong style="font-size: 18px; color: #064b2e; margin-bottom: 5px;">
-                        Your loan application is currently <?= e(strtolower($latestLoan['status'] ?? 'under review')) ?>.
-                    </strong>
+                    <?php if ($latestLoan): ?>
+                        <div style="font-size: 48px; margin-bottom: 10px;">
+                            <?php
+                            $loanStatus = strtolower($latestLoan['status'] ?? 'pending');
 
-                    <p style="font-size: 13px; color: #666; margin-top: 5px;">
-                        Application Date: 
-                        <strong>
-                            <?= !empty($latestLoan['application_date']) ? date('M d, Y', strtotime($latestLoan['application_date'])) : (!empty($latestLoan['created_at']) ? date('M d, Y', strtotime($latestLoan['created_at'])) : date('M d, Y')) ?>
+                            $statusIcons = [
+                                'approved' => '✓',
+                                'rejected' => '✕',
+                                'paid' => '✓',
+                                'pending' => '…'
+                            ];
+                            ?>
+
+                            <?= $statusIcons[$loanStatus] ?? '…' ?>
+                        </div>
+
+                        <strong style="font-size: 18px; color: #064b2e; margin-bottom: 5px;">
+                            Your loan application is currently <?= e(strtolower($latestLoan['status'] ?? 'under review')) ?>.
                         </strong>
-                    </p>
-                <?php else: ?>
-                    <div style="font-size: 40px; color: #aaa; margin-bottom: 10px;">📄</div>
-                    <p style="color: #777; font-style: italic;">No active loan applications found.</p>
-                <?php endif; ?>
+
+                        <p style="font-size: 13px; color: #666; margin-top: 5px;">
+                            Application Date: 
+                            <strong>
+                                <?= !empty($latestLoan['application_date']) ? date('M d, Y', strtotime($latestLoan['application_date'])) : (!empty($latestLoan['created_at']) ? date('M d, Y', strtotime($latestLoan['created_at'])) : date('M d, Y')) ?>
+                            </strong>
+                        </p>
+                    <?php else: ?>
+                        <div style="font-size: 40px; color: #aaa; margin-bottom: 10px;">📄</div>
+                        <p style="color: #777; font-style: italic; margin: 0;">No active loan applications found.</p>
+                    <?php endif; ?>
+
+                </div>
 
             </div>
 
