@@ -1,7 +1,7 @@
 <?php
 
-require_once __DIR__ . '/config/database.php';
-require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 $message = '';
 $status = 'error';
@@ -63,7 +63,7 @@ if ($token === '' || !preg_match('/^[a-f0-9]{64}$/', $token)) {
 
 $pageTitle = 'Email Verification';
 
-require __DIR__ . '/includes/header.php';
+require __DIR__ . '/../includes/header.php';
 
 ?>
 
@@ -75,4 +75,4 @@ require __DIR__ . '/includes/header.php';
     <a href="login.php" class="btn btn-primary">Go to Login</a>
 </div>
 
-<?php require __DIR__ . '/includes/footer.php'; ?>
+<?php require __DIR__ . '/../includes/footer.php'; ?>

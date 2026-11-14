@@ -3,7 +3,12 @@ require_once 'config/database.php';
 require_once 'includes/functions.php';
 
 if (is_logged_in()) {
-    header('Location: dashboard.php');
+    if (current_user()['role'] === 'admin') {
+        header('Location: admin/admin.php');
+    } else {
+        header('Location: member/dashboard.php');
+    }
+
     exit;
 }
 
@@ -25,11 +30,11 @@ require 'includes/header.php';
             </p>
 
             <div class="home-actions">
-                <a href="login.php" class="home-login-btn">
+                <a href="auth/login.php" class="home-login-btn">
                     Member Login
                 </a>
 
-                <a href="register.php" class="home-register-btn">
+                <a href="auth/register.php" class="home-register-btn">
                     Become a Member
                 </a>
             </div>

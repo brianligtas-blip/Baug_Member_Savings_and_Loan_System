@@ -1,8 +1,9 @@
 <?php
-require_once 'includes/functions.php';
-require_admin();
 
-require_once 'config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
+
+require_admin();
 
 /* ==========================================
    REPORT SUMMARY
@@ -72,12 +73,12 @@ try {
 }
 
 $pageTitle = 'Reports & Activities';
-require 'includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="app-layout">
 
-    <?php require 'includes/sidebar.php'; ?>
+    <?php require __DIR__ . '/../includes/sidebar.php'; ?>
 
     <main class="app-main">
 
@@ -213,4 +214,4 @@ require 'includes/header.php';
 
 </div>
 
-<?php require 'includes/footer.php'; ?>
+<?php require __DIR__ . '/../includes/footer.php'; ?>

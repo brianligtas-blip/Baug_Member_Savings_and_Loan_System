@@ -1,7 +1,9 @@
 <?php
-require_once 'includes/functions.php';
+
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
+
 require_admin();
-require_once 'config/database.php';
 
 $pageTitle = 'Transaction History - Admin';
 
@@ -18,12 +20,12 @@ $transactions = $pdo->query("
     ORDER BY transactions.created_at DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-require 'includes/header.php';
+require __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="app-layout">
 
-    <?php require 'includes/admin_sidebar.php'; ?>
+    <?php require __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
     <main class="app-main">
         <h1 class="page-title">Transaction History</h1>
@@ -65,4 +67,4 @@ require 'includes/header.php';
 
 </div>
 
-<?php require 'includes/footer.php'; ?>
+<?php require __DIR__ . '/../includes/footer.php'; ?>

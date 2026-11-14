@@ -1,7 +1,9 @@
 <?php
-require_once 'includes/functions.php';
+
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
+
 require_login();
-require_once 'config/database.php';
 
 $userId = current_user()['id'];
 $message = '';
@@ -90,12 +92,12 @@ $history = $stmt->fetchAll();
 
 $pageTitle = 'My Savings';  
 
-require 'includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="app-layout member-dashboard">
 
-    <?php require 'includes/sidebar.php'; ?>
+    <?php require __DIR__ . '/../includes/sidebar.php'; ?>
 
     <main class="app-content">
 
@@ -197,4 +199,4 @@ require 'includes/header.php';
 
 </div>
 
-<?php require 'includes/footer.php'; ?>
+<?php require __DIR__ . '/../includes/footer.php'; ?>

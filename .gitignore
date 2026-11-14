@@ -1,10 +1,11 @@
 # Composer dependencies
 /vendor/
 
-# Private email configuration
+# Private configuration
 /config/mail.php
+/config/recaptcha.php
 
-# Local environment settings
+# Environment settings
 .env
 .env.*
 
@@ -19,7 +20,16 @@
 *.tmp
 *.bak
 *.old
+*~
 
 # Operating system files
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# IDE settings
+.vscode/
+.idea/
+
+# Generated files
+.phpunit.cache/

@@ -147,10 +147,10 @@ main.page-content {
 ===================================================== */
 
 .registration-card {
-    width: calc(100% - 32px);
-    max-width: 1500px;
+    width: calc(100% - 30px);
+    max-width: 900px;
     margin: 14px auto;
-    padding: 20px 24px;
+    padding: 14px 18px;
     background: #ffffff;
     border: 1px solid #d5e8db;
     border-radius: 14px;
@@ -159,17 +159,32 @@ main.page-content {
 
 .section-title {
     display: flex;
+    justify-content: center;
     align-items: center;
-    margin-bottom: 14px;
-    padding-bottom: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
     color: #064e30;
     border-bottom: 2px solid #eef2f5;
 }
 
 .section-title h1 {
     color: #1b4332;
-    font-size: 23px;
+    font-size: 21px;
     font-weight: 800;
+    text-align: center;
+}
+.registration-title {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 9px;
+}
+
+.registration-title-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: #087c43;
 }
 
 .form-section {
@@ -196,8 +211,8 @@ main.page-content {
 
 .form-column {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 9px 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px 10px;
     width: 100%;
 }
 
@@ -210,7 +225,7 @@ main.page-content {
 .form-group label {
     margin-bottom: 4px;
     color: #333333;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
 }
 
@@ -218,14 +233,14 @@ main.page-content {
 .registration-card select {
     width: 100%;
     max-width: 100%;
-    min-height: 34px;
-    padding: 7px 9px;
+    min-height: 30px;
+    padding: 5px 8px;
     border: 1px solid #cbd9d2;
     border-radius: 6px;
     background: #ffffff;
     color: #24352c;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .registration-card input:focus,
@@ -295,156 +310,29 @@ div.error-message {
     text-transform: uppercase;
 }
 
-/* DESKTOP REGISTRATION */
-
-@media (min-width: 1000px) and (min-height: 760px) {
-    body:has(.registration-card) {
-        height: 100vh;
-        min-height: 100vh;
-        overflow: hidden;
-    }
-
-    body:has(.registration-card) main.page-content {
-        display: flex;
-        flex: 1 1 auto;
-        min-height: 0;
-        align-items: stretch;
-    }
-
-    .registration-card {
-        width: calc(100% - 36px);
-        max-width: 1600px;
-        margin: 10px auto;
-        padding: 14px 20px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    .section-title {
-        margin-bottom: 9px;
-        padding-bottom: 7px;
-    }
-
-    .section-title h1 {
-        font-size: 21px;
-    }
-
-    .registration-form {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-areas:
-            "personal address"
-            "account member"
-            "security security"
-            "privacy privacy"
-            "actions actions";
-        column-gap: 22px;
-        row-gap: 3px;
-        align-content: center;
-    }
-
-    .registration-form > .form-section:nth-of-type(1) {
-        grid-area: personal;
-    }
-
-    .registration-form > .form-section:nth-of-type(2) {
-        grid-area: address;
-    }
-
-    .registration-form > .form-section:nth-of-type(3) {
-        grid-area: account;
-    }
-
-    .registration-form > .form-section:nth-of-type(4) {
-        grid-area: member;
-    }
-
-    .registration-form > .form-section:nth-of-type(5) {
-        grid-area: security;
-    }
-
-    .registration-form > .form-section {
-        margin-bottom: 5px;
-    }
-
-    .registration-form > .form-section:nth-of-type(5) .form-column {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .registration-form > .form-section:nth-of-type(5) .section-heading p {
-        margin-bottom: 5px;
-    }
-
-    .registration-form .form-column {
-        gap: 6px 12px;
-    }
-
-    .registration-form .section-heading h2 {
-        font-size: 14px;
-    }
-
-    .registration-form .section-heading p {
-        margin-bottom: 6px;
-        font-size: 10px;
-    }
-
-    .registration-form .form-group label {
-        font-size: 11px;
-    }
-
-    .registration-form .form-group small,
-    .registration-form .error-message {
-        font-size: 10px;
-    }
-
-    .registration-form .privacy-consent {
-        grid-area: privacy;
-        padding: 8px 11px;
-        margin-top: 3px;
-    }
-
-    .registration-form .privacy-consent label {
-        font-size: 11px;
-        line-height: 1.35;
-    }
-
-    .registration-form .form-actions {
-        grid-area: actions;
-        margin-top: 8px;
-        gap: 9px;
-    }
-
-    .registration-form .btn {
-        min-height: 35px;
-        padding: 8px 17px;
-        font-size: 12px;
-    }
-}
-
 /* PRIVACY CONSENT */
 
 .privacy-consent {
-    padding: 16px;
-    margin-top: 15px;
+    padding: 9px 12px;
+    margin-top: 8px;
     background: #f1f8f3;
     border: 1px solid #d5e8db;
-    border-radius: 8px;
+    border-radius: 7px;
 }
 
 .privacy-consent label {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
     color: #444444;
-    font-size: 13px;
-    line-height: 1.6;
+    font-size: 11px;
+    line-height: 1.4;
     cursor: pointer;
 }
 
 .privacy-consent input[type="checkbox"] {
     flex-shrink: 0;
-    margin-top: 4px;
+    margin-top: 3px;
 }
 
 /* =====================================================
@@ -512,6 +400,19 @@ div.error-message {
     color: #087c43;
     font-weight: bold;
     text-decoration: underline;
+}
+/* COMPACT REGISTRATION BUTTONS */
+
+.registration-card .form-actions {
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.registration-card .form-actions .btn {
+    min-height: 34px;
+    padding: 8px 18px;
+    font-size: 12px;
 }
 
 /* =====================================================
@@ -2040,5 +1941,215 @@ summary:focus-visible {
 
     .otp-card .section-title h1 {
         font-size: 22px;
+    }
+}
+
+
+/* ==========================================
+   BAUG REGISTRATION FORM - COMPACT DESIGN
+========================================== */
+
+@media (min-width: 1000px) {
+
+    body:has(.registration-card) {
+        min-height: 100vh;
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    body:has(.registration-card) main.page-content {
+        display: block;
+        min-height: auto;
+        padding: 8px 0;
+    }
+
+    .registration-card {
+        width: calc(100% - 30px);
+        max-width: 900px;
+        margin: 10px auto;
+        padding: 14px 18px;
+        box-sizing: border-box;
+    }
+
+    .registration-card .section-title {
+        justify-content: center;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+    }
+
+    .registration-card .section-title h1 {
+        font-size: 21px;
+        margin: 0;
+        text-align: center;
+    }
+
+    .registration-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+            "personal address"
+            "account member"
+            "security security"
+            "captcha captcha"
+            "privacy privacy"
+            "actions actions";
+        column-gap: 14px;
+        row-gap: 8px;
+        align-content: start;
+    }
+
+    .registration-form > .form-section:nth-of-type(1) {
+        grid-area: personal;
+    }
+
+    .registration-form > .form-section:nth-of-type(2) {
+        grid-area: address;
+    }
+
+    .registration-form > .form-section:nth-of-type(3) {
+        grid-area: account;
+    }
+
+    .registration-form > .form-section:nth-of-type(4) {
+        grid-area: member;
+    }
+
+    .registration-form > .form-section:nth-of-type(5) {
+        grid-area: security;
+    }
+
+    .registration-form > .form-section:nth-of-type(6) {
+        grid-area: captcha;
+    }
+
+    .registration-form > .form-section {
+        min-width: 0;
+        margin: 0;
+    }
+
+    .registration-form .section-heading {
+        margin-bottom: 5px;
+    }
+
+    .registration-form .section-heading h2 {
+        font-size: 13px;
+        margin-bottom: 2px;
+    }
+
+    .registration-form .section-heading p {
+        font-size: 9px;
+        margin-bottom: 4px;
+    }
+
+    .registration-form .form-column {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px 9px;
+    }
+
+    .registration-form > .form-section:nth-of-type(5) .form-column {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .registration-form .form-group {
+        min-width: 0;
+        margin-bottom: 0;
+    }
+
+    .registration-form .form-group label {
+        font-size: 10px;
+        margin-bottom: 2px;
+    }
+
+    .registration-card input:not([type="checkbox"]):not([type="hidden"]),
+    .registration-card select {
+        width: 100%;
+        min-width: 0;
+        min-height: 30px;
+        height: 30px;
+        padding: 5px 7px;
+        font-size: 10px;
+        box-sizing: border-box;
+    }
+
+    .registration-form .form-group small,
+    .registration-form .error-message {
+        font-size: 9px;
+        margin-top: 2px;
+    }
+
+    .registration-form > .form-section:nth-of-type(6) {
+        margin-top: 2px;
+    }
+
+    .registration-form > .privacy-consent {
+        grid-area: privacy;
+        margin: 3px 0;
+        padding: 8px 10px;
+    }
+
+    .registration-form > .form-actions {
+        grid-area: actions;
+        justify-content: center;
+        gap: 8px;
+        margin: 5px auto 2px;
+    }
+
+    .registration-form > .form-actions .btn {
+        min-height: 32px;
+        padding: 6px 16px;
+        font-size: 11px;
+    }
+}
+
+
+/* Tablet layout */
+@media (min-width: 600px) and (max-width: 999px) {
+
+    .registration-card {
+        width: calc(100% - 32px);
+        padding: 16px;
+    }
+
+    .registration-card .form-column {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .registration-form > .form-section:nth-of-type(5) .form-column {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Mobile layout */
+@media (max-width: 599px) {
+
+    .registration-card {
+        width: calc(100% - 20px);
+        margin: 12px auto;
+        padding: 12px 10px;
+    }
+
+    .registration-card .form-column {
+        grid-template-columns: 1fr;
+        gap: 13px;
+    }
+
+    .registration-form > .form-section:nth-of-type(5) .form-column {
+        grid-template-columns: 1fr;
+    }
+
+    .registration-card .section-title h1 {
+        font-size: 19px;
+    }
+
+    .registration-card .form-group label {
+        font-size: 12px;
+    }
+
+    .registration-card input:not([type="checkbox"]),
+    .registration-card select {
+        min-height: 36px;
+        font-size: 13px;
     }
 }

@@ -1,8 +1,9 @@
 <?php
-require_once 'includes/functions.php';
-require_admin();
 
-require_once 'config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
+
+require_admin();
 
 $message = '';
 $error = '';
@@ -131,7 +132,7 @@ try {
 }
 
 $pageTitle = 'Manage Members';
-require 'includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <style>
@@ -217,7 +218,7 @@ td.text-center {
 
 <div class="app-layout">
 
-    <?php require 'includes/admin_sidebar.php'; ?>
+    <?php require __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
     <main class="app-main">
 
@@ -578,4 +579,4 @@ td.text-center {
 
 </div>
 
-<?php require 'includes/footer.php'; ?>
+<?php require __DIR__ . '/../includes/footer.php'; ?>   

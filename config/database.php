@@ -1,11 +1,15 @@
 <?php
 
+// Set PHP timezone to Philippine time.
+date_default_timezone_set('Asia/Manila');
+
 $host = "localhost";
 $dbname = "baug_member_system";
 $username = "root";
 $password = "";
 
 try {
+
     $pdo = new PDO(
         "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
         $username,
@@ -18,10 +22,18 @@ try {
         ]
     );
 
+    // Set MySQL session timezone to Philippine time (UTC+8).
+    $pdo->exec("SET time_zone = '+08:00'");
+
 } catch (PDOException $e) {
 
-    error_log("BAUG database connection error: " . $e->getMessage());
+    error_log(
+        "BAUG database connection error: " . $e->getMessage()
+    );
 
     http_response_code(500);
-    exit("The system is temporarily unavailable. Please try again later.");
+
+    exit(
+        "The system is temporarily unavailable. Please try again later."
+    );
 }

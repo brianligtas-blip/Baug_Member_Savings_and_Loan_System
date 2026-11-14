@@ -290,12 +290,12 @@ if (session_status() === PHP_SESSION_NONE) {
         <!-- ACTION BUTTONS -->
         <div class="actions">
 
-            <a href="register.php" class="back-button">
+            <a href="auth/register.php" class="back-button">
                 Back to Registration
             </a>
 
             <a
-                href="register.php#privacy-consent"
+                href="auth/register.php#privacy-consent"
                 class="understand-button"
             >
                 I Have Read the Privacy Notice
