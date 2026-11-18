@@ -54,8 +54,6 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="login-title"
              style="flex-direction: column; gap: 8px; margin-bottom: 12px;">
 
-            <span style="font-size: 40px; color: #075b37;">🔒</span>
-
             <h1 style="font-size: 22px; color: #064b2e;">
                 Forgot Password?
             </h1>
@@ -64,8 +62,7 @@ require_once __DIR__ . '/../includes/header.php';
 
         <p style="font-size: 13px; color: #557264; margin-bottom: 25px; line-height: 1.4;">
             Enter your registered email address to begin the account
-            recovery process. You will need to answer your assigned
-            security questions to verify your identity.
+            recovery process.
         </p>
 
         <?php if ($error): ?>

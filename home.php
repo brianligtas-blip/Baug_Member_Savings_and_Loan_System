@@ -25,10 +25,6 @@ require 'includes/header.php';
             <h1>Save. Borrow.</h1>
             <h1>Grow Together.</h1>
 
-            <p>
-                Together for a Stronger Community
-            </p>
-
             <div class="home-actions">
                 <a href="auth/login.php" class="home-login-btn">
                     Member Login

@@ -409,7 +409,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Keep technical details in the server error log.
                     error_log(
-                        'BAUG OTP Resend Error: ' . $e->getMessage()
+                        'BAUG OTP Verification Error: ' . $e->getMessage()
                     );
 
                     // Show a safe message to the user.
@@ -483,8 +483,6 @@ if ($success === '') {
 require __DIR__ . '/../includes/header.php';
 
 ?>
-
-<div class="registration-card">
 
     <div class="otp-page">
 
@@ -657,9 +655,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             clearInterval(timer);
 
-            resendButton.disabled = false;
-
             if (remaining > 0) {
+
+                resendButton.disabled = false;
 
                 countdown.textContent =
                     'You have ' + remaining +
@@ -667,8 +665,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             } else {
 
+                resendButton.disabled = true;
+
                 countdown.textContent =
-                    'You can now request another verification code.';
+                    'Your resend limit has been reached. Refresh this page to check when you can request another code.';
             }
         }
 

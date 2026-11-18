@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/mailer.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -12,7 +13,7 @@ $pageTitle = 'Reset Password';
 $error = '';
 $success = '';
 
-// Require successful security-question verification.
+// REQUIRE SUCCESSFUL SECURITY-QUESTION VERIFICATION
 if (
     empty($_SESSION['recovery_verified']) ||
     $_SESSION['recovery_verified'] !== true ||
@@ -23,13 +24,14 @@ if (
     exit;
 }
 
-// Verification authorization expires after 10 minutes.
+// VERIFICATION AUTHORIZATION EXPIRES AFTER 10 MINUTES
 if (time() - $_SESSION['recovery_verified_at'] > 600) {
 
     unset(
         $_SESSION['recovery_user_id'],
         $_SESSION['recovery_verified'],
-        $_SESSION['recovery_verified_at']
+        $_SESSION['recovery_verified_at'],
+        $_SESSION['recovery_email']
     );
 
     header('Location: forgot_password.php');
@@ -47,7 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $error = 'Please complete both password fields.';
 
-    } elseif (strlen($newPassword) < 9 || strlen($newPassword) > 64) {
+    } elseif (
+        strlen($newPassword) < 9 ||
+        strlen($newPassword) > 64
+    ) {
 
         $error = 'Password must be between 9 and 64 characters.';
 
@@ -57,49 +62,227 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } else {
 
-        try {
+        // CHECK PASSWORD STRENGTH
+        $passwordTypes = 0;
 
-            $userId = (int) $_SESSION['recovery_user_id'];
+        if (preg_match('/[a-z]/', $newPassword)) {
+            $passwordTypes++;
+        }
 
-            $hashedPassword = password_hash(
-                $newPassword,
-                PASSWORD_DEFAULT
-            );
+        if (preg_match('/[A-Z]/', $newPassword)) {
+            $passwordTypes++;
+        }
 
-            $stmt = $pdo->prepare("
-                UPDATE users
-                SET password = ?
-                WHERE id = ?
-            ");
+        if (preg_match('/[0-9]/', $newPassword)) {
+            $passwordTypes++;
+        }
 
-            $stmt->execute([
-                $hashedPassword,
-                $userId
-            ]);
+        if (preg_match('/[^a-zA-Z0-9]/', $newPassword)) {
+            $passwordTypes++;
+        }
 
-            if ($stmt->rowCount() > 0) {
+        if ($passwordTypes < 2) {
 
-                // Remove recovery authorization after successful reset.
-                unset(
-                    $_SESSION['recovery_user_id'],
-                    $_SESSION['recovery_verified'],
-                    $_SESSION['recovery_verified_at'],
-                    $_SESSION['recovery_email']
-                );
+            $error = 'Your password must contain at least two types of characters: uppercase letters, lowercase letters, numbers, or special characters.';
 
-                // Generate a fresh CSRF token.
-                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        } else {
 
-                $success = 'Your password has been successfully reset. You may now log in.';
+            try {
 
-            } else {
+                $userId = (int) $_SESSION['recovery_user_id'];
 
-                $error = 'Unable to reset your password. Please try again.';
+                // GET ACCOUNT INFORMATION
+                $userStmt = $pdo->prepare("
+                    SELECT id, full_name, email, username, password
+                    FROM users
+                    WHERE id = ?
+                    LIMIT 1
+                ");
+
+                $userStmt->execute([$userId]);
+
+                $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$user) {
+
+                    $error = 'Unable to reset your password. Please restart the recovery process.';
+
+                } else {
+
+                    // GET PREVIOUS PASSWORD HASHES
+                    $historyStmt = $pdo->prepare("
+                        SELECT password_hash
+                        FROM password_history
+                        WHERE user_id = ?
+                    ");
+
+                    $historyStmt->execute([$userId]);
+
+                    $passwordHistory = $historyStmt->fetchAll(PDO::FETCH_COLUMN);
+
+                    // CHECK AGAINST PREVIOUSLY USED PASSWORDS
+                    $passwordReused = false;
+
+                    foreach ($passwordHistory as $oldHash) {
+
+                        if (password_verify($newPassword, $oldHash)) {
+                            $passwordReused = true;
+                            break;
+                        }
+                    }
+
+                    // ALSO CHECK THE CURRENT PASSWORD
+                    if (
+                        !$passwordReused &&
+                        password_verify($newPassword, $user['password'])
+                    ) {
+                        $passwordReused = true;
+                    }
+
+                    if ($passwordReused) {
+
+                        $error = 'You cannot reuse a previously used password. Please choose a different password.';
+
+                    } else {
+
+                        $hashedPassword = password_hash(
+                            $newPassword,
+                            PASSWORD_DEFAULT
+                        );
+
+                        // UPDATE PASSWORD AND HISTORY TOGETHER
+                        $pdo->beginTransaction();
+
+                        try {
+
+                            // PRESERVE CURRENT PASSWORD IN HISTORY
+                            // IF IT HAS NOT ALREADY BEEN RECORDED.
+                            $currentHashRecorded = false;
+
+                            foreach ($passwordHistory as $oldHash) {
+
+                                if (hash_equals($oldHash, $user['password'])) {
+                                    $currentHashRecorded = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$currentHashRecorded) {
+
+                                $saveOldPassword = $pdo->prepare("
+                                    INSERT INTO password_history
+                                        (user_id, password_hash)
+                                    VALUES (?, ?)
+                                ");
+
+                                $saveOldPassword->execute([
+                                    $userId,
+                                    $user['password']
+                                ]);
+                            }
+
+                            // UPDATE ACCOUNT PASSWORD
+                            $updateStmt = $pdo->prepare("
+                                UPDATE users
+                                SET
+                                    password = ?,
+                                    failed_attempts = 0,
+                                    locked_until = NULL,
+                                    lock_tier = 0
+                                WHERE id = ?
+                            ");
+
+                            $updateStmt->execute([
+                                $hashedPassword,
+                                $userId
+                            ]);
+
+                            // SAVE NEW PASSWORD HASH
+                            $saveNewPassword = $pdo->prepare("
+                                INSERT INTO password_history
+                                    (user_id, password_hash)
+                                VALUES (?, ?)
+                            ");
+
+                            $saveNewPassword->execute([
+                                $userId,
+                                $hashedPassword
+                            ]);
+
+                            $pdo->commit();
+
+                        } catch (Throwable $e) {
+
+                            if ($pdo->inTransaction()) {
+                                $pdo->rollBack();
+                            }
+
+                            throw $e;
+                        }
+
+                        // REMOVE RECOVERY AUTHORIZATION
+                        unset(
+                            $_SESSION['recovery_user_id'],
+                            $_SESSION['recovery_verified'],
+                            $_SESSION['recovery_verified_at'],
+                            $_SESSION['recovery_email']
+                        );
+
+                        // REGENERATE CSRF TOKEN
+                        $_SESSION['csrf_token'] = bin2hex(
+                            random_bytes(32)
+                        );
+
+                        // SEND PASSWORD RESET NOTIFICATION
+                        $subject = 'BAUG Security Alert: Password Reset';
+
+                        $message = "
+                            <h2>Password Reset Notification</h2>
+
+                            <p>Hello " . e($user['full_name']) . ",</p>
+
+                            <p>Your BAUG Member Savings and Loan System
+                            password has been successfully reset.</p>
+
+                            <p><strong>Account:</strong> "
+                                . e($user['username']) . "</p>
+
+                            <p><strong>Date and time:</strong> "
+                                . date('Y-m-d H:i:s') . "</p>
+
+                            <p>If you did not perform this action,
+                            please contact the administrator immediately.</p>
+
+                            <p>BAUG Member Savings and Loan System</p>
+                        ";
+
+                        $emailSent = false;
+
+                        if (!empty($user['email'])) {
+
+                            $emailSent = send_email(
+                                $user['email'],
+                                $user['full_name'],
+                                $subject,
+                                $message
+                            );
+                        }
+
+                        if ($emailSent) {
+
+                            $success = 'Your password has been successfully reset. A notification email has been sent to your registered email address. You may now log in.';
+
+                        } else {
+
+                            $success = 'Your password has been successfully reset, but the notification email could not be sent. You may now log in.';
+                        }
+                    }
+                }
+
+            } catch (Throwable $e) {
+
+                $error = 'Something went wrong. Please try again later.';
             }
-
-        } catch (PDOException $e) {
-
-            $error = 'Something went wrong. Please try again later.';
         }
     }
 }

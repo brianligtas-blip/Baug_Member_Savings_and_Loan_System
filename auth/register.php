@@ -44,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // NAME EXTENSION
     $nameExtensionChoice = trim($_POST['name_extension_type'] ?? '');
+    $nameExtensionOther = strtoupper(trim($_POST['name_extension_other'] ?? ''));
+
     $nameExtension = $nameExtensionChoice;
 
     $idNumber = trim($_POST['id_number'] ?? '');
@@ -128,43 +130,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (preg_match('/\p{N}/u', $value)) {
             $errors[$field] = "Numbers are not allowed in {$label}.";
         } elseif (strpos($value, '  ') !== false) {
-            $errors[$field] = "Double spaces are not allowed in {$label}.";
+           $errors[$field] = "Double space is not allowed in {$label}.";
         } elseif (preg_match('/[^\p{L}\p{M} ]/u', $value)) {
             $errors[$field] = "Special characters are not allowed in {$label}.";
         } elseif (preg_match($repeatedLetterPattern, $value)) {
-            $errors[$field] = "Three consecutive identical letters are not allowed in {$label}.";
+            $errors[$field] = "Three consecutive identical letters are not allowed.";
         } elseif (mb_strtoupper($value, 'UTF-8') === $value) {
-            $errors[$field] = "{$label} must not contain all capital letters.";
+            $errors[$field] = "Do not use all capital letters.";
         } elseif (preg_match('/^\p{Ll}/u', $value)) {
-            $errors[$field] = "The first letter of {$label} must be capitalized.";
+            $errors[$field] = "First letter of your name must be capital.";
         } elseif (!preg_match($namePattern, $value)) {
             $errors[$field] = "Each word in {$label} must start with a capital letter.";
         }
     }
 
+
     // NAME EXTENSION VALIDATION
 
     $allowedExtensions = [
         'Jr.',
-        'Sr.',
+        'Sr.'
+    ];
+
+    $allowedOtherExtensions = [
+        'I',
         'II',
         'III',
         'IV',
-        'Other'
+        'IX',
+        'X'
     ];
 
-    if (
-        $nameExtensionChoice !== '' &&
-        !in_array($nameExtensionChoice, $allowedExtensions, true)
-    ) {
+    if ($nameExtensionChoice === '') {
+
+        // No extension selected; this is allowed.
+
+        $nameExtension = '';
+
+    } elseif (in_array($nameExtensionChoice, $allowedExtensions, true)) {
+
+        $nameExtension = $nameExtensionChoice;
+
+    } elseif ($nameExtensionChoice === 'Other') {
+
+        if ($nameExtensionOther === '') {
+
+            $errors['name_extension'] = 'Please enter your other name extension.';
+
+        } elseif (!in_array($nameExtensionOther, $allowedOtherExtensions, true)) {
+
+            $errors['name_extension'] = 'Enter a valid Roman numeral extension: I, II, III, IV, IX, or X.';
+
+        } else {
+
+            $nameExtension = $nameExtensionOther;
+        }
+
+    } else {
+
         $errors['name_extension'] = 'Please select a valid name extension.';
     }
 
+
     // MEMBER ID VALIDATION
     if ($idNumber === '') {
-        $errors['id_number'] = 'Member ID is required.';
+        $errors['id_number'] = 'ID Number is required.';
     } elseif (!preg_match('/^\d{4}-\d{4}$/', $idNumber)) {
-        $errors['id_number'] = 'Use the format xxxx-xxxx.';
+        $errors['id_number'] = 'ID Number must follow the format xxxx-xxxx.';
     }
 
     // DATE OF BIRTH VALIDATION
@@ -254,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($emailLength > 100) {
         $errors['email'] = 'Email must not exceed 100 characters.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Enter a valid email address.';
+        $errors['email'] = 'Please enter a valid email address.';
     }
 
     // USERNAME VALIDATION
@@ -268,11 +300,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // PASSWORD VALIDATION
     if ($password === '') {
+
         $errors['password'] = 'Password is required.';
+
     } elseif (!validate_password_length($password)) {
+
         $errors['password'] = 'Password must contain 9-64 characters.';
+
+    } else {
+
+        // Count password character types
+        $passwordTypes = 0;
+
+        if (preg_match('/[a-z]/', $password)) {
+            $passwordTypes++;
+        }
+
+        if (preg_match('/[A-Z]/', $password)) {
+            $passwordTypes++;
+        }
+
+        if (preg_match('/[0-9]/', $password)) {
+            $passwordTypes++;
+        }
+
+        if (preg_match('/[^a-zA-Z0-9]/', $password)) {
+            $passwordTypes++;
+        }
+
+        // Determine password strength
+        if (strlen($password) < 9 || $passwordTypes < 2) {
+
+            $errors['password'] =
+                'Password is too weak. Use at least 9 characters and 2 character types.';
+
+        } elseif (strlen($password) >= 12 && $passwordTypes >= 3) {
+
+            $passwordStrengthLevel = 'Strong';
+
+        } else {
+
+            $passwordStrengthLevel = 'Medium';
+        }
     }
 
+    // CONFIRM PASSWORD VALIDATION
     if ($confirmPassword === '') {
         $errors['confirm_password'] = 'Please confirm your password.';
     } elseif ($password !== $confirmPassword) {
@@ -335,7 +407,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       $_POST['privacy_consent'] === '1';
 
     if (!$privacyConsent) {
-        $errors['privacy_consent'] = 'You must agree to the Privacy Notice.';
+        $errors['privacy_consent'] = 'You must agree to the Privacy Notice to register.';
     }
 
    // GOOGLE reCAPTCHA V2 VALIDATION
@@ -405,7 +477,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $idCheck->execute([$idNumber]);
 
             if ($idCheck->fetch(PDO::FETCH_ASSOC)) {
-                $errors['id_number'] = 'This Member ID is already registered.';
+                $errors['id_number'] = 'This ID Number is already registered.';
             }
 
             // CHECK DUPLICATE EMAIL
@@ -579,6 +651,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($insertStmt->rowCount() === 1) {
 
                     $newUserId = (int)$pdo->lastInsertId();
+
+                    // SAVE INITIAL PASSWORD TO PASSWORD HISTORY
+                    $historyStmt = $pdo->prepare("
+                        INSERT INTO password_history (user_id, password_hash)
+                        VALUES (?, ?)
+                    ");
+
+                    $historyStmt->execute([
+                        $newUserId,
+                        $hashedPassword
+                    ]);
 
                     // GENERATE REGISTRATION OTP
                     $otp = (string)random_int(100000, 999999);
@@ -759,7 +842,7 @@ function field_error(array $errors, string $key): void {
         </div>
     <?php endif; ?>
 
-    <form method="POST" action="register.php" class="registration-form" novalidate>
+    <form method="POST" action="register.php" class="registration-form">
 
         <?= csrf_field() ?>
 
@@ -924,17 +1007,28 @@ function field_error(array $errors, string $key): void {
                 <div class="form-group">
                     <label for="username">Username <span class="required">*</span></label>
                     <input type="text" id="username" name="username"
-                           minlength="6" maxlength="16" required
-                           value="<?= old_value('username') ?>">
+                        minlength="6" maxlength="16" required
+                        value="<?= old_value('username') ?>">
+
+                    <small id="username-status" aria-live="polite"></small>
+
                     <small>6-16 characters. Start with a letter.</small>
+
                     <?php field_error($errors, 'username'); ?>
                 </div>
 
                 <div class="form-group">
                     <label for="password">Password <span class="required">*</span></label>
+
                     <input type="password" id="password" name="password"
-                           minlength="9" maxlength="64" required>
+                        minlength="9" maxlength="64" required>
+
+                    <small id="password-strength">
+                        Password strength: Not entered
+                    </small>
+
                     <small>Password must contain 9-64 characters.</small>
+
                     <?php field_error($errors, 'password'); ?>
                 </div>
 
@@ -1065,12 +1159,12 @@ function field_error(array $errors, string $key): void {
                        required <?= !empty($old['privacy_consent']) ? 'checked' : '' ?>>
 
                 <span>
-                    I have read and agree to the collection and processing
-                    of my personal data in accordance with the
+                    I have read the
                     <a href="../privacy.php" target="_blank" class="privacy-link">
                         Privacy Notice
                     </a>
-                    and the Data Privacy Act of 2012 (RA 10173).
+                    and agree to the collection and processing of my personal data
+                    in accordance with the Data Privacy Act of 2012 (RA 10173).
                 </span>
             </label>
 
@@ -1211,6 +1305,144 @@ document.addEventListener('DOMContentLoaded', function () {
 
     extensionSelect.addEventListener('change', updateExtensionField);
     otherInput.addEventListener('input', validateOtherExtension);
+
+    // LIVE USERNAME AVAILABILITY CHECK
+    const usernameInput = document.getElementById('username');
+    const usernameStatus = document.getElementById('username-status');
+
+    let usernameTimer;
+
+    usernameInput.addEventListener('input', function () {
+
+        clearTimeout(usernameTimer);
+
+        const username = usernameInput.value.trim();
+
+        usernameStatus.textContent = '';
+        usernameStatus.style.color = '';
+
+        if (username === '') {
+            return;
+        }
+
+        if (
+            username.length < 6 ||
+            username.length > 16 ||
+            !/^[a-zA-Z][a-zA-Z0-9]*$/.test(username)
+        ) {
+            usernameStatus.textContent =
+                'Username must be 6-16 characters, start with a letter, and contain only letters and numbers.';
+
+            usernameStatus.style.color = '#dc2626';
+            return;
+        }
+
+        usernameStatus.textContent = 'Checking username...';
+        usernameStatus.style.color = '#64748b';
+
+        usernameTimer = setTimeout(function () {
+
+            fetch('check_username.php?username=' + encodeURIComponent(username))
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Request failed');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+
+                    // Ignore results if the user has typed something new.
+                    if (usernameInput.value.trim() !== username) {
+                        return;
+                    }
+
+                    if (data.status === 'available') {
+
+                        usernameStatus.textContent =
+                            'Username is available.';
+
+                        usernameStatus.style.color = '#15803d';
+
+                    } else if (data.status === 'taken') {
+
+                        usernameStatus.textContent =
+                            'This username is already registered.';
+
+                        usernameStatus.style.color = '#dc2626';
+
+                    } else if (data.status === 'invalid') {
+
+                        usernameStatus.textContent =
+                            'Please enter a valid username.';
+
+                        usernameStatus.style.color = '#dc2626';
+
+                    } else {
+
+                        usernameStatus.textContent =
+                            'Unable to check username. Please try again.';
+
+                        usernameStatus.style.color = '#dc2626';
+                    }
+
+                })
+                .catch(() => {
+
+                    usernameStatus.textContent =
+                        'Username check failed. Please try again.';
+
+                    usernameStatus.style.color = '#dc2626';
+
+                });
+
+        }, 400);
+
+    });
+
+    // LIVE PASSWORD STRENGTH METER
+    const passwordInput = document.getElementById('password');
+    const passwordStrength = document.getElementById('password-strength');
+
+    function checkPasswordStrength(password) {
+        let types = 0;
+
+        if (/[a-z]/.test(password)) types++;
+        if (/[A-Z]/.test(password)) types++;
+        if (/[0-9]/.test(password)) types++;
+        if (/[^a-zA-Z0-9]/.test(password)) types++;
+
+        if (password.length < 9 || types < 2) {
+            return 'Weak';
+        }
+
+        if (password.length >= 12 && types >= 3) {
+            return 'Strong';
+        }
+
+        return 'Medium';
+    }
+
+    passwordInput.addEventListener('input', function () {
+        const password = passwordInput.value;
+
+        if (password === '') {
+            passwordStrength.textContent = 'Password strength: Not entered';
+            passwordStrength.style.color = '';
+            return;
+        }
+
+        const strength = checkPasswordStrength(password);
+
+        passwordStrength.textContent = 'Password strength: ' + strength;
+
+        if (strength === 'Weak') {
+            passwordStrength.style.color = '#dc2626';
+        } else if (strength === 'Medium') {
+            passwordStrength.style.color = '#d97706';
+        } else {
+            passwordStrength.style.color = '#15803d';
+        }
+    });
 
     // FORM SUBMISSION VALIDATION
     const form = document.querySelector('.registration-form');
