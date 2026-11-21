@@ -55,7 +55,7 @@ $logoutPageUrl = $baseUrl . 'auth/logout.php';
 
 </head>
 
-<body>
+<body data-session-warning="<?= $isLoggedIn ? 'enabled' : 'disabled' ?>">
 
 <header class="public-header">
 

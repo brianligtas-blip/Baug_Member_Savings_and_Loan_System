@@ -104,11 +104,14 @@ function current_user() {
 |--------------------------------------------------------------------------
 */
 
-function require_login() {
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
+function require_login(): void
+{
     if (!is_logged_in()) {
-
-        header('Location: home.php');
+        header('Location: ../home.php');
         exit;
     }
 
@@ -120,6 +123,7 @@ function require_login() {
 
     $lastActivity = $_SESSION['last_activity'] ?? $now;
 
+    // Check session expiration.
     if (($now - $lastActivity) > $timeout) {
 
         $_SESSION = [];
@@ -144,37 +148,30 @@ function require_login() {
 
         session_destroy();
 
-        header('Location: login.php?timeout=1');
+        header('Location: ../auth/login.php?timeout=1');
         exit;
     }
 
     $_SESSION['last_activity'] = $now;
 }
-
 /*
 |--------------------------------------------------------------------------
 | ADMINISTRATOR ACCESS
 |--------------------------------------------------------------------------
 */
 
-function require_admin() {
-    // Siguroha nga naka-start ang session
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+function require_admin(): void
+{
+    // Ensure the user is logged in and the session is valid.
+    require_login();
 
-    // Kuhaa ang role gikan sa tanang posibleng session structures
-    $role = $_SESSION['role'] 
-         ?? $_SESSION['user_role'] 
-         ?? $_SESSION['user']['role'] 
-         ?? $_SESSION['user_type'] 
-         ?? '';
+    // Get the authenticated user's role.
+    $role = current_user()['role'] ?? '';
 
-    // Check kon 'admin' ba ang role (case-insensitive para ma-accept maski 'Admin' o 'ADMIN')
+    // Allow administrators only.
     if (strtolower(trim($role)) !== 'admin') {
-        // Kon dili admin o wala naka-login, i-redirect ngadto sa login page
-        header('Location: login.php');
-        exit;
+        http_response_code(403);
+        exit('Access denied. You are not authorized to access this page.');
     }
 }
 

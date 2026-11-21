@@ -4,22 +4,78 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/mailer.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-$pageTitle = 'Verify Email';
+$pageTitle = 'OTP Verification';
 
 $errors = [];
 $success = '';
 $notice = '';
 
-if (empty($_SESSION['pending_registration_user_id'])) {
-    header('Location: register.php');
+/*
+|--------------------------------------------------------------------------
+| DETERMINE VERIFICATION PURPOSE FROM THE SESSION
+|--------------------------------------------------------------------------
+| Never trust a purpose value submitted by the browser.
+*/
+
+$registrationMode = !empty($_SESSION['pending_registration_user_id']);
+$loginMode = !empty($_SESSION['pending_login_user_id']);
+
+if ($registrationMode && !$loginMode) {
+    $purpose = 'register';
+    $userId = (int) $_SESSION['pending_registration_user_id'];
+    $pageTitle = 'Verify Your Email';
+} elseif ($loginMode && !$registrationMode) {
+    $purpose = 'login';
+    $userId = (int) $_SESSION['pending_login_user_id'];
+    $pageTitle = 'Verify Your Login';
+} else {
+    header('Location: login.php');
     exit;
 }
 
-$userId = (int) $_SESSION['pending_registration_user_id'];
+/*
+|--------------------------------------------------------------------------
+| GET ACCOUNT DETAILS
+|--------------------------------------------------------------------------
+*/
+
+$userStmt = $pdo->prepare("
+    SELECT id, full_name, email, email_verified, account_status, role
+    FROM users
+    WHERE id = ?
+    LIMIT 1
+");
+
+$userStmt->execute([$userId]);
+$user = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$user) {
+    unset(
+        $_SESSION['pending_registration_user_id'],
+        $_SESSION['pending_login_user_id']
+    );
+
+    header('Location: login.php');
+    exit;
+}
+
+if ($purpose === 'register' && (int) $user['email_verified'] === 1) {
+    unset($_SESSION['pending_registration_user_id']);
+    header('Location: login.php');
+    exit;
+}
+
+if (
+    $purpose === 'login' &&
+    (
+        (int) $user['email_verified'] !== 1 ||
+        $user['account_status'] !== 'active'
+    )
+) {
+    unset($_SESSION['pending_login_user_id']);
+    header('Location: login.php');
+    exit;
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -47,26 +103,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Lock the resend tracking record.
             $trackingStmt = $pdo->prepare("
-                SELECT
-                    last_sent_at,
-                    window_started_at,
-                    resend_count
+                SELECT last_sent_at, window_started_at, resend_count
                 FROM otp_resend_limits
                 WHERE user_id = ?
-                AND purpose = 'register'
+                AND purpose = ?
                 FOR UPDATE
             ");
 
-            $trackingStmt->execute([$userId]);
+            $trackingStmt->execute([$userId, $purpose]);
             $tracking = $trackingStmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$tracking) {
                 throw new RuntimeException(
-                    'OTP resend tracking information was not found.'
+                    'OTP resend information is unavailable. Please return to the login page and try again.'
                 );
             }
 
-            // Check whether the 15-minute window has expired.
             $now = time();
 
             $windowStart = strtotime($tracking['window_started_at']);
@@ -78,22 +130,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ? 0
                 : (int) $tracking['resend_count'];
 
-            // Enforce the 60-second cooldown.
+            // 60-second cooldown.
             $cooldownEnds = $lastSent + 60;
 
             if ($now < $cooldownEnds) {
-
-                $wait = $cooldownEnds - $now;
-
                 throw new RuntimeException(
-                    'Please wait ' . $wait .
+                    'Please wait ' . ($cooldownEnds - $now) .
                     ' second(s) before requesting another code.'
                 );
             }
 
-            // Enforce a maximum of 3 resends within 15 minutes.
+            // Maximum of 3 resends within 15 minutes.
             if ($currentResendCount >= 3) {
-
                 $wait = ($windowStart + 900) - $now;
 
                 throw new RuntimeException(
@@ -103,9 +151,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
-            // Get the member's email details.
+            // Recheck the account before sending another OTP.
             $userStmt = $pdo->prepare("
-                SELECT full_name, email, email_verified
+                SELECT full_name, email, email_verified, account_status
                 FROM users
                 WHERE id = ?
                 LIMIT 1
@@ -115,33 +163,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $userStmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$user) {
-                throw new RuntimeException(
-                    'The registration account could not be found.'
-                );
+                throw new RuntimeException('The account could not be found.');
             }
 
-            if ((int) $user['email_verified'] === 1) {
+            if (
+                $purpose === 'register' &&
+                (int) $user['email_verified'] === 1
+            ) {
                 throw new RuntimeException(
                     'This email address has already been verified.'
                 );
             }
 
-            // Generate a secure six-digit OTP.
-            $otp = (string) random_int(100000, 999999);
+            if (
+                $purpose === 'login' &&
+                (
+                    (int) $user['email_verified'] !== 1 ||
+                    $user['account_status'] !== 'active'
+                )
+            ) {
+                throw new RuntimeException(
+                    'This account is not currently available for login.'
+                );
+            }
 
-            // Hash the OTP before storing it.
+            // Generate and hash a secure six-digit OTP.
+            $otp = (string) random_int(100000, 999999);
             $otpHash = password_hash($otp, PASSWORD_DEFAULT);
 
-            // Calculate the five-minute expiration.
             $expiresAt = date(
                 'Y-m-d H:i:s',
                 time() + (5 * 60)
             );
 
-            /*
-             * Insert the new OTP first.
-             * The previous OTP is not cancelled yet.
-             */
             $insertOtp = $pdo->prepare("
                 INSERT INTO otps (
                     user_id,
@@ -150,53 +204,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     expires_at,
                     attempts,
                     used_at
-                ) VALUES (
-                    ?,
-                    'register',
-                    ?,
-                    ?,
-                    0,
-                    NULL
-                )
+                ) VALUES (?, ?, ?, ?, 0, NULL)
             ");
 
             $insertOtp->execute([
                 $userId,
+                $purpose,
                 $otpHash,
                 $expiresAt
             ]);
 
             $newOtpId = (int) $pdo->lastInsertId();
 
-            // Prepare the required email content.
+            // Prepare the appropriate email.
+            if ($purpose === 'register') {
+
+                $subject = 'Verify Your BAUG Account';
+                $heading = 'BAUG Email Verification';
+                $description = 'Your new account verification code is:';
+
+            } else {
+
+                $subject = 'Your BAUG Login Verification Code';
+                $heading = 'BAUG Login Verification';
+                $description = 'Use this code to complete your login:';
+            }
+
             $emailMessage = "
-                <h2>BAUG Email Verification</h2>
+                <div style='font-family:Arial,sans-serif;color:#26352b;line-height:1.6;'>
+                    <h2 style='color:#176b3a;'>{$heading}</h2>
 
-                <p>Hello " . e($user['full_name']) . ",</p>
+                    <p>Hello " . e($user['full_name']) . ",</p>
 
-                <p>Your new account verification code is:</p>
+                    <p>{$description}</p>
 
-                <h1 style='letter-spacing: 6px;'>
-                    {$otp}
-                </h1>
+                    <h1 style='
+                        letter-spacing:8px;
+                        color:#176b3a;
+                        font-size:32px;
+                    '>{$otp}</h1>
 
-                <p>This code expires in 5 minutes.</p>
+                    <p>This code expires in 5 minutes.</p>
 
-                <p>Do not share this code with anyone.</p>
+                    <p>Do not share this code with anyone.</p>
 
-                <p>
-                    If you did not request this code, ignore this email
-                    and consider changing your password.
-                </p>
+                    <p>If you did not request this code, you may ignore this email.</p>
 
-                <p>BAUG Member Savings and Loan System</p>
+                    <p>
+                        <strong>BAUG Member Savings and Loan System</strong>
+                    </p>
+                </div>
             ";
 
-            // Send the email before cancelling the previous OTP.
+            // Send the new OTP before cancelling the previous one.
             $emailSent = send_email(
                 $user['email'],
                 $user['full_name'],
-                'Verify Your BAUG Account',
+                $subject,
                 $emailMessage
             );
 
@@ -206,18 +270,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
-            // Cancel older unused registration OTPs.
+            // Cancel older unused OTPs for this purpose.
             $cancelOldOtps = $pdo->prepare("
                 UPDATE otps
                 SET used_at = NOW()
                 WHERE user_id = ?
-                AND purpose = 'register'
+                AND purpose = ?
                 AND used_at IS NULL
                 AND id <> ?
             ");
 
             $cancelOldOtps->execute([
                 $userId,
+                $purpose,
                 $newOtpId
             ]);
 
@@ -231,7 +296,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         window_started_at = NOW(),
                         resend_count = 1
                     WHERE user_id = ?
-                    AND purpose = 'register'
+                    AND purpose = ?
                 ");
 
             } else {
@@ -242,15 +307,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         last_sent_at = NOW(),
                         resend_count = resend_count + 1
                     WHERE user_id = ?
-                    AND purpose = 'register'
+                    AND purpose = ?
                 ");
             }
 
-            $updateTracking->execute([$userId]);
+            $updateTracking->execute([$userId, $purpose]);
 
             $pdo->commit();
 
-            $notice = 'A new verification code has been sent to your email address.';
+            $notice = 'A new verification code has been sent to your registered email address.';
 
         } catch (PDOException $e) {
 
@@ -279,8 +344,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             error_log('BAUG OTP Resend Error: ' . $e->getMessage());
 
-            $errors['otp'] =
-                'Unable to verify your email at this time. Please try again.';
+            $errors['resend'] =
+                'Unable to resend your code at this time. Please try again.';
         }
 
     /*
@@ -289,7 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     |--------------------------------------------------------------------------
     */
 
-     } elseif ($action === 'verify') {
+    } elseif ($action === 'verify') {
 
         $otp = trim($_POST['otp'] ?? '');
 
@@ -299,70 +364,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         } else {
 
-            $stmt = $pdo->prepare("
-                SELECT id, code_hash, expires_at, attempts, used_at
-                FROM otps
-                WHERE user_id = ?
-                AND purpose = 'register'
-                AND used_at IS NULL
-                ORDER BY created_at DESC, id DESC
-                LIMIT 1
-            ");
+            try {
 
-            $stmt->execute([$userId]);
-            $otpRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+                $pdo->beginTransaction();
 
-            if (!$otpRecord) {
-
-                $errors['otp'] = 'No valid verification code was found. Please request a new code.';
-
-            } elseif ((int) $otpRecord['attempts'] >= 3) {
-
-                $errors['otp'] = 'Too many incorrect attempts. Please request a new code.';
-
-            } elseif (strtotime($otpRecord['expires_at']) < time()) {
-
-                $errors['otp'] = 'Your verification code has expired. Please request a new code.';
-
-            } elseif (!password_verify($otp, $otpRecord['code_hash'])) {
-
-                $currentAttempts = (int) $otpRecord['attempts'];
-                $newAttempts = $currentAttempts + 1;
-
-                $updateAttempts = $pdo->prepare("
-                    UPDATE otps
-                    SET
-                        attempts = attempts + 1,
-                        used_at = CASE
-                            WHEN attempts + 1 >= 3 THEN NOW()
-                            ELSE used_at
-                        END
-                    WHERE id = ?
+                // Lock the latest unused OTP to prevent simultaneous reuse.
+                $stmt = $pdo->prepare("
+                    SELECT id, code_hash, expires_at, attempts, used_at
+                    FROM otps
+                    WHERE user_id = ?
+                    AND purpose = ?
                     AND used_at IS NULL
-                    AND attempts < 3
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT 1
+                    FOR UPDATE
                 ");
 
-                $updateAttempts->execute([$otpRecord['id']]);
+                $stmt->execute([$userId, $purpose]);
+                $otpRecord = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if ($newAttempts >= 3) {
+                if (!$otpRecord) {
 
-                    $errors['otp'] = 'You have entered an incorrect code 3 times. This OTP has been cancelled. Please request a new code.';
+                    $pdo->rollBack();
+
+                    $errors['otp'] =
+                        'No valid verification code was found. Please request a new code.';
+
+                } elseif ((int) $otpRecord['attempts'] >= 3) {
+
+                    $pdo->rollBack();
+
+                    $errors['otp'] =
+                        'Too many incorrect attempts. Please request a new code.';
+
+                } elseif (strtotime($otpRecord['expires_at']) < time()) {
+
+                    $pdo->rollBack();
+
+                    $errors['otp'] =
+                        'Your verification code has expired. Please request a new code.';
+
+                } elseif (!password_verify($otp, $otpRecord['code_hash'])) {
+
+                    $newAttempts = (int) $otpRecord['attempts'] + 1;
+
+                    $updateAttempts = $pdo->prepare("
+                        UPDATE otps
+                        SET
+                            attempts = attempts + 1,
+                            used_at = CASE
+                                WHEN attempts + 1 >= 3 THEN NOW()
+                                ELSE used_at
+                            END
+                        WHERE id = ?
+                        AND used_at IS NULL
+                        AND attempts < 3
+                    ");
+
+                    $updateAttempts->execute([$otpRecord['id']]);
+
+                    $pdo->commit();
+
+                    if ($newAttempts >= 3) {
+
+                        $errors['otp'] =
+                            'You have entered an incorrect code 3 times. This OTP has been cancelled. Please request a new code.';
+
+                    } else {
+
+                        $remainingAttempts = 3 - $newAttempts;
+
+                        $errors['otp'] =
+                            'Incorrect verification code. You have ' .
+                            $remainingAttempts .
+                            ' attempt(s) remaining.';
+                    }
 
                 } else {
 
-                    $remainingAttempts = 3 - $newAttempts;
-
-                    $errors['otp'] = 'Incorrect verification code. You have '
-                        . $remainingAttempts
-                        . ' attempt(s) remaining.';
-                }
-
-            } else {
-
-                try {
-
-                    $pdo->beginTransaction();
-
+                    // Mark this OTP as used.
                     $useOtp = $pdo->prepare("
                         UPDATE otps
                         SET used_at = NOW()
@@ -380,44 +460,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         );
                     }
 
-                    $verifyUser = $pdo->prepare("
-                        UPDATE users
-                        SET email_verified = 1
-                        WHERE id = ?
-                        AND email_verified = 0
-                    ");
+                    if ($purpose === 'register') {
 
-                    $verifyUser->execute([$userId]);
+                        $verifyUser = $pdo->prepare("
+                            UPDATE users
+                            SET email_verified = 1
+                            WHERE id = ?
+                            AND email_verified = 0
+                        ");
 
-                    if ($verifyUser->rowCount() !== 1) {
-                        throw new RuntimeException(
-                            'The account could not be verified.'
-                        );
+                        $verifyUser->execute([$userId]);
+
+                        if ($verifyUser->rowCount() !== 1) {
+                            throw new RuntimeException(
+                                'The account could not be verified.'
+                            );
+                        }
+
+                        $pdo->commit();
+
+                        unset($_SESSION['pending_registration_user_id']);
+
+                        $success =
+                            'Your email has been verified successfully. Your account is now awaiting administrator approval.';
+
+                    } else {
+
+                        // Recheck the account before creating a login session.
+                        $loginUserStmt = $pdo->prepare("
+                            SELECT id, full_name, username, role,
+                                   email_verified, account_status
+                            FROM users
+                            WHERE id = ?
+                            LIMIT 1
+                            FOR UPDATE
+                        ");
+
+                        $loginUserStmt->execute([$userId]);
+                        $loginUser = $loginUserStmt->fetch(PDO::FETCH_ASSOC);
+
+                        if (
+                            !$loginUser ||
+                            (int) $loginUser['email_verified'] !== 1 ||
+                            $loginUser['account_status'] !== 'active'
+                        ) {
+                            throw new RuntimeException(
+                                'This account is no longer eligible to log in.'
+                            );
+                        }
+
+                        // Reset failed login attempts only after OTP succeeds.
+                        $updateLogin = $pdo->prepare("
+                            UPDATE users
+                            SET
+                                failed_attempts = 0,
+                                locked_until = NULL,
+                                lock_tier = 0,
+                                last_login_at = NOW()
+                            WHERE id = ?
+                        ");
+
+                        $updateLogin->execute([$userId]);
+
+                        $pdo->commit();
+
+                        // Create the authenticated session only now.
+                        session_regenerate_id(true);
+
+                        $_SESSION['user'] = [
+                            'id' => (int) $loginUser['id'],
+                            'full_name' => $loginUser['full_name'],
+                            'username' => $loginUser['username'],
+                            'role' => $loginUser['role']
+                        ];
+
+                        $_SESSION['last_activity'] = time();
+
+                        unset($_SESSION['pending_login_user_id']);
+
+                        if ($loginUser['role'] === 'admin') {
+                            header('Location: ../admin/admin.php');
+                        } else {
+                            header('Location: ../member/dashboard.php');
+                        }
+
+                        exit;
                     }
-
-                    $pdo->commit();
-
-                    unset($_SESSION['pending_registration_user_id']);
-
-                    $success = 'Your email has been verified successfully. Your account is now awaiting administrator approval.';
-
-                } catch (Throwable $e) {
-
-                    if ($pdo->inTransaction()) {
-                        $pdo->rollBack();
-                    }
-
-                    // Keep technical details in the server error log.
-                    error_log(
-                        'BAUG OTP Verification Error: ' . $e->getMessage()
-                    );
-
-                    // Show a safe message to the user.
-                    $errors['otp'] =
-                        'Unable to verify your email at this time. Please try again.';
                 }
+
+            } catch (Throwable $e) {
+
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+
+                error_log('BAUG OTP Verification Error: ' . $e->getMessage());
+
+                $errors['otp'] =
+                    'Unable to verify your code at this time. Please try again.';
             }
         }
+
+    } else {
+
+        $errors['general'] = 'Invalid request. Please try again.';
     }
 }
 
@@ -433,17 +579,14 @@ $remainingResends = 3;
 if ($success === '') {
 
     $trackingStmt = $pdo->prepare("
-        SELECT
-            last_sent_at,
-            window_started_at,
-            resend_count
+        SELECT last_sent_at, window_started_at, resend_count
         FROM otp_resend_limits
         WHERE user_id = ?
-        AND purpose = 'register'
+        AND purpose = ?
         LIMIT 1
     ");
 
-    $trackingStmt->execute([$userId]);
+    $trackingStmt->execute([$userId, $purpose]);
     $tracking = $trackingStmt->fetch(PDO::FETCH_ASSOC);
 
     if ($tracking) {
@@ -459,24 +602,15 @@ if ($success === '') {
             ? 0
             : (int) $tracking['resend_count'];
 
-        $remainingResends = max(
-            0,
-            3 - $currentResendCount
-        );
+        $remainingResends = max(0, 3 - $currentResendCount);
 
         $availableAt = $lastSent + 60;
 
         if ($currentResendCount >= 3) {
-            $availableAt = max(
-                $availableAt,
-                $windowStart + 900
-            );
+            $availableAt = max($availableAt, $windowStart + 900);
         }
 
-        $resendWait = max(
-            0,
-            $availableAt - $now
-        );
+        $resendWait = max(0, $availableAt - $now);
     }
 }
 
@@ -484,146 +618,155 @@ require __DIR__ . '/../includes/header.php';
 
 ?>
 
-    <div class="otp-page">
+<main class="otp-page">
 
-        <div class="otp-card">
+    <section class="otp-card">
 
-            <div class="section-title">
-                <h1>Verify Your Email</h1>
+        <p class="otp-eyebrow">BAUG MEMBER SYSTEM</p>
+
+        <h1>
+            <?= $purpose === 'register'
+                ? 'Verify Your Email'
+                : 'Verify Your Login' ?>
+        </h1>
+
+        <p class="otp-description">
+            <?= $purpose === 'register'
+                ? 'Your account is almost ready. Enter the six-digit verification code sent to your registered email address.'
+                : 'For your account security, enter the six-digit login verification code sent to your registered email address.' ?>
+        </p>
+
+        <?php if ($success !== ''): ?>
+
+            <div class="otp-alert otp-alert-success">
+                <?= e($success) ?>
             </div>
 
-            <?php if ($success !== ''): ?>
+            <a href="login.php" class="otp-button">
+                Continue to Login
+            </a>
 
-                <p class="success-message">
-                    <?= e($success) ?>
-                </p>
+        <?php else: ?>
 
-                <a href="login.php" class="btn btn-primary otp-login-btn">
-                    Go to Login
-                </a>
+            <?php if ($notice !== ''): ?>
+                <div class="otp-alert otp-alert-success">
+                    <?= e($notice) ?>
+                </div>
+            <?php endif; ?>
 
-            <?php else: ?>
+            <?php if (!empty($errors['general'])): ?>
+                <div class="otp-alert otp-alert-error">
+                    <?= e($errors['general']) ?>
+                </div>
+            <?php endif; ?>
 
-                <p class="otp-description">
-                    Enter the six-digit verification code sent to your email address.
-                </p>
+            <form method="POST" action="verify_otp.php" class="otp-form">
 
-                <?php if ($notice !== ''): ?>
-                    <p class="success-message">
-                        <?= e($notice) ?>
+                <?= csrf_field() ?>
+
+                <input type="hidden" name="action" value="verify">
+
+                <label for="otp">Six-Digit Verification Code</label>
+
+                <input
+                    type="text"
+                    id="otp"
+                    name="otp"
+                    class="otp-input"
+                    maxlength="6"
+                    minlength="6"
+                    pattern="[0-9]{6}"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    placeholder="000000"
+                    required
+                    autofocus
+                >
+
+                <?php if (!empty($errors['otp'])): ?>
+                    <p class="otp-field-error">
+                        <?= e($errors['otp']) ?>
                     </p>
                 <?php endif; ?>
 
-                <?php if (!empty($errors['general'])): ?>
-                    <p class="error-message">
-                        <?= e($errors['general']) ?>
-                    </p>
-                <?php endif; ?>
+                <button type="submit" class="otp-button">
+                    <?= $purpose === 'register'
+                        ? 'Verify Email'
+                        : 'Verify Login' ?>
+                </button>
+
+            </form>
+
+            <div class="otp-divider"></div>
+
+            <div class="otp-resend-section">
+
+                <p class="otp-resend-question">
+                    Didn't receive your code?
+                </p>
 
                 <form method="POST" action="verify_otp.php">
 
                     <?= csrf_field() ?>
 
-                    <input type="hidden" name="action" value="verify">
-
-                    <div class="form-group">
-
-                        <label for="otp">Verification Code</label>
-
-                        <input
-                            type="text"
-                            id="otp"
-                            name="otp"
-                            maxlength="6"
-                            minlength="6"
-                            inputmode="numeric"
-                            autocomplete="one-time-code"
-                            placeholder="Enter 6-digit OTP"
-                            required
-                        >
-
-                        <?php if (!empty($errors['otp'])): ?>
-                            <small class="error-message">
-                                <?= e($errors['otp']) ?>
-                            </small>
-                        <?php endif; ?>
-
-                    </div>
+                    <input type="hidden" name="action" value="resend">
 
                     <button
                         type="submit"
-                        class="btn btn-primary otp-verify-btn"
+                        id="resendOtpButton"
+                        class="otp-resend-button"
+                        <?= $resendWait > 0 || $remainingResends <= 0
+                            ? 'disabled'
+                            : '' ?>
                     >
-                        Verify Email
+                        Resend Verification Code
                     </button>
 
                 </form>
 
-                <div class="otp-resend-section">
+                <p
+                    id="resendCountdown"
+                    class="otp-countdown"
+                    data-wait="<?= (int) $resendWait ?>"
+                    data-remaining="<?= (int) $remainingResends ?>"
+                >
+                    <?php if ($resendWait > 0): ?>
 
-                    <p>Did not receive the code?</p>
+                        You can request another code in
+                        <span id="countdownSeconds">
+                            <?= (int) $resendWait ?>
+                        </span>
+                        seconds.
 
-                    <form method="POST" action="verify_otp.php">
+                    <?php elseif ($remainingResends > 0): ?>
 
-                        <?= csrf_field() ?>
+                        <?= (int) $remainingResends ?>
+                        resend(s) remaining in this 15-minute period.
 
-                        <input
-                            type="hidden"
-                            name="action"
-                            value="resend"
-                        >
+                    <?php else: ?>
 
-                        <button
-                            type="submit"
-                            id="resendOtpButton"
-                            class="btn btn-secondary"
-                            <?= $resendWait > 0 ? 'disabled' : '' ?>
-                        >
-                            Resend Code
-                        </button>
+                        You have reached the resend limit.
 
-                    </form>
-
-                    <p id="resendCountdown"
-                       data-wait="<?= (int) $resendWait ?>"
-                       data-remaining="<?= (int) $remainingResends ?>">
-
-                        <?php if ($resendWait > 0): ?>
-
-                            You can request another code in
-                            <span id="countdownSeconds">
-                                <?= (int) $resendWait ?>
-                            </span>
-                            second(s).
-
-                        <?php elseif ($remainingResends > 0): ?>
-
-                            You have <?= (int) $remainingResends ?>
-                            resend(s) remaining in this 15-minute period.
-
-                        <?php else: ?>
-
-                            You have reached the resend limit.
-
-                        <?php endif; ?>
-
-                    </p>
-
-                    <?php if (!empty($errors['resend'])): ?>
-                        <small class="error-message">
-                            <?= e($errors['resend']) ?>
-                        </small>
                     <?php endif; ?>
+                </p>
 
-                </div>
+                <?php if (!empty($errors['resend'])): ?>
+                    <p class="otp-field-error">
+                        <?= e($errors['resend']) ?>
+                    </p>
+                <?php endif; ?>
 
-            <?php endif; ?>
+            </div>
 
-        </div>
+            <a href="login.php" class="otp-back-link">
+                Back to Login
+            </a>
 
-    </div>
+        <?php endif; ?>
 
-</div>
+    </section>
+
+</main>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -660,7 +803,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 resendButton.disabled = false;
 
                 countdown.textContent =
-                    'You have ' + remaining +
+                    remaining +
                     ' resend(s) remaining in this 15-minute period.';
 
             } else {
@@ -668,7 +811,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 resendButton.disabled = true;
 
                 countdown.textContent =
-                    'Your resend limit has been reached. Refresh this page to check when you can request another code.';
+                    'Your resend limit has been reached. Refresh this page later to check availability.';
             }
         }
 

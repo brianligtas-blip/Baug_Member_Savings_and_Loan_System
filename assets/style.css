@@ -1815,132 +1815,223 @@ summary:focus-visible {
 .member-search-right .btn-clear-nav:hover {
     background-color: #d1d5db;
 }
-/* ==========================================
-   EMAIL OTP VERIFICATION
-========================================== */
+
+/* =========================================
+   BAUG OTP VERIFICATION PAGE
+========================================= */
 
 .otp-page {
     min-height: 75vh;
     display: flex;
-    justify-content: center;
     align-items: center;
-    padding: 40px 20px;
+    justify-content: center;
+    padding: 45px 20px;
+    background: #f4f8f5;
 }
 
 .otp-card {
     width: 100%;
-    max-width: 440px;
-    padding: 38px 35px;
+    max-width: 460px;
+    padding: 42px 38px;
     background: #ffffff;
-    border: 1px solid #dce8df;
-    border-radius: 14px;
-    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e3ebe5;
+    border-radius: 16px;
+    box-shadow: 0 12px 35px rgba(20, 70, 40, 0.09);
     text-align: center;
 }
 
 .otp-icon {
-    width: 65px;
-    height: 65px;
-    margin: 0 auto 18px;
+    width: 64px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #e8f5ec;
-    color: #198754;
+    margin: 0 auto 20px;
     border-radius: 50%;
+    background: #e8f4ec;
+    color: #176b3a;
     font-size: 27px;
 }
 
-.otp-card .section-title {
-    margin-bottom: 15px;
+.otp-eyebrow {
+    margin: 0 0 9px;
+    color: #398456;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
 }
 
-.otp-card .section-title h1 {
-    margin: 0;
-    color: #176b3a;
-    font-size: 25px;
+.otp-card h1 {
+    margin: 0 0 13px;
+    color: #183d29;
+    font-size: 27px;
+    font-weight: 700;
 }
 
 .otp-description {
-    color: #666666;
+    margin: 0 auto 28px;
+    max-width: 350px;
+    color: #68766d;
     font-size: 14px;
-    line-height: 1.6;
-    margin-bottom: 25px;
+    line-height: 1.7;
 }
 
-.otp-card .form-group {
+.otp-form {
     text-align: left;
-    margin-bottom: 22px;
 }
 
-.otp-card .form-group label {
+.otp-form label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    color: #263b2e;
+    font-size: 14px;
     font-weight: 600;
-    color: #333333;
 }
 
-.otp-card input {
+.otp-input {
     width: 100%;
-    box-sizing: border-box;
-    padding: 13px 15px;
-    border: 1px solid #cbd8ce;
-    border-radius: 8px;
+    height: 60px;
+    padding: 10px 15px;
+    border: 1px solid #ccd9cf;
+    border-radius: 9px;
     outline: none;
-    font-size: 18px;
-    letter-spacing: 5px;
+    background: #fbfdfb;
+    color: #183d29;
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: 12px;
     text-align: center;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.otp-card input:focus {
-    border-color: #198754;
-    box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.12);
+.otp-input:focus {
+    border-color: #25834a;
+    box-shadow: 0 0 0 3px rgba(37, 131, 74, 0.12);
 }
 
-.otp-card .error-message {
-    display: block;
-    margin-top: 7px;
-    color: #dc3545;
-    font-size: 13px;
-}
-
-.otp-verify-btn,
-.otp-login-btn {
-    display: block;
+.otp-button {
     width: 100%;
-    box-sizing: border-box;
-    padding: 13px 18px;
+    min-height: 49px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 22px;
+    padding: 12px 20px;
     border: none;
-    border-radius: 8px;
-    background: #198754;
+    border-radius: 9px;
+    background: #176b3a;
     color: #ffffff;
     font-size: 15px;
     font-weight: 600;
-    text-align: center;
     text-decoration: none;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.2s, transform 0.2s;
 }
 
-.otp-verify-btn:hover,
-.otp-login-btn:hover {
-    background: #146c43;
+.otp-button:hover {
+    background: #10552d;
     color: #ffffff;
+    transform: translateY(-1px);
 }
 
-.otp-card .success-message {
+.otp-divider {
+    height: 1px;
+    margin: 27px 0 22px;
+    background: #e8eee9;
+}
+
+.otp-resend-question {
+    margin: 0 0 8px;
+    color: #68766d;
+    font-size: 13px;
+}
+
+.otp-resend-button {
+    padding: 7px 12px;
+    border: none;
+    background: transparent;
+    color: #176b3a;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.otp-resend-button:hover:not(:disabled) {
+    color: #0e4d29;
+    text-decoration: underline;
+}
+
+.otp-resend-button:disabled {
+    color: #9aa79e;
+    cursor: not-allowed;
+}
+
+.otp-countdown {
+    margin: 8px 0 0;
+    color: #89958d;
+    font-size: 12px;
     line-height: 1.6;
-    margin: 18px 0 25px;
 }
 
-@media (max-width: 480px) {
-    .otp-card {
-        padding: 30px 22px;
+.otp-alert {
+    margin-bottom: 20px;
+    padding: 13px 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+    text-align: left;
+}
+
+.otp-alert-success {
+    border: 1px solid #cce7d3;
+    background: #eff8f1;
+    color: #23663a;
+}
+
+.otp-alert-error {
+    border: 1px solid #f0cccc;
+    background: #fff3f3;
+    color: #a52d2d;
+}
+
+.otp-field-error {
+    margin: 9px 0 0;
+    color: #c0392b;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.otp-back-link {
+    display: inline-block;
+    margin-top: 25px;
+    color: #64736a;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.otp-back-link:hover {
+    color: #176b3a;
+    text-decoration: underline;
+}
+
+@media (max-width: 520px) {
+    .otp-page {
+        min-height: 70vh;
+        padding: 25px 14px;
     }
 
-    .otp-card .section-title h1 {
-        font-size: 22px;
+    .otp-card {
+        padding: 32px 22px;
+    }
+
+    .otp-card h1 {
+        font-size: 23px;
+    }
+
+    .otp-input {
+        height: 55px;
+        font-size: 24px;
+        letter-spacing: 9px;
     }
 }
 
@@ -1966,7 +2057,7 @@ summary:focus-visible {
 
     .registration-card {
         width: calc(100% - 30px);
-        max-width: 1450px;
+        max-width: 1300px;
         margin: 2px auto;
         padding: 4px 9px;
         box-sizing: border-box;
@@ -2154,4 +2245,21 @@ summary:focus-visible {
         min-height: 36px;
         font-size: 13px;
     }
+}
+.register-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.register-submit svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.register-submit:hover svg {
+    transform: translateX(4px);
 }

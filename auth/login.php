@@ -1,31 +1,73 @@
+
 <?php
 
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/mailer.php';
 
+/*
+|--------------------------------------------------------------------------
+| CAPTCHA GENERATOR
+|--------------------------------------------------------------------------
+*/
+
+function baug_generate_login_captcha(): string
+{
+    $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $captcha = '';
+
+    for ($i = 0; $i < 5; $i++) {
+        $captcha .= $characters[
+            random_int(0, strlen($characters) - 1)
+        ];
+    }
+
+    return $captcha;
+}
+
+// Refresh CAPTCHA when requested.
+if (isset($_GET['refresh_captcha'])) {
+    $_SESSION['captcha'] = baug_generate_login_captcha();
+
+    header('Location: login.php');
+    exit;
+}
+
+/*
+|--------------------------------------------------------------------------
+| REDIRECT ALREADY AUTHENTICATED USERS
+|--------------------------------------------------------------------------
+*/
+
 if (is_logged_in()) {
+
     if (current_user()['role'] === 'admin') {
         header('Location: ../admin/admin.php');
     } else {
         header('Location: ../member/dashboard.php');
     }
+
     exit;
 }
 
 $error = '';
 $showForgotPassword = false;
 
+/*
+|--------------------------------------------------------------------------
+| HANDLE LOGIN
+|--------------------------------------------------------------------------
+*/
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // CSRF VALIDATION
     verify_csrf();
 
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
+    $captcha = trim($_POST['captcha'] ?? '');
 
     // CAPTCHA VALIDATION
-    $captcha = trim($_POST['captcha'] ?? '');
     $expectedCaptcha = $_SESSION['captcha'] ?? '';
 
     if (
@@ -34,6 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ) {
 
         $error = 'Invalid CAPTCHA. Please try again.';
+
+        unset($_SESSION['captcha']);
 
     } else {
 
@@ -59,9 +103,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
 
         $stmt->execute([$username]);
-        $user = $stmt->fetch();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // CHECK FORGOT PASSWORD VISIBILITY
+        // FORGOT PASSWORD LINK VISIBILITY
         if (
             $user &&
             (
@@ -72,7 +116,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $showForgotPassword = true;
         }
 
-        // CHECK ACCOUNT LOCKOUT
+        /*
+        |--------------------------------------------------------------------------
+        | CHECK TEMPORARY LOCKOUT
+        |--------------------------------------------------------------------------
+        */
+
         if ($user && !empty($user['locked_until'])) {
 
             $lockExpiry = strtotime($user['locked_until']);
@@ -85,22 +134,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             } else {
 
-                // EXPIRED LOCKOUT: RESET FAILED ATTEMPTS
-                $stmt = $pdo->prepare("
+                // Reset failed attempts after the lockout expires.
+                // Keep lock_tier for progressive lockout.
+                $resetLock = $pdo->prepare("
                     UPDATE users
-                    SET failed_attempts = 0,
+                    SET
+                        failed_attempts = 0,
                         locked_until = NULL
                     WHERE id = ?
                 ");
 
-                $stmt->execute([$user['id']]);
+                $resetLock->execute([$user['id']]);
 
                 $user['failed_attempts'] = 0;
                 $user['locked_until'] = null;
             }
         }
 
-        // VERIFY PASSWORD
+        /*
+        |--------------------------------------------------------------------------
+        | VERIFY PASSWORD
+        |--------------------------------------------------------------------------
+        */
+
         if ($error === '') {
 
             if ($user && password_verify($password, $user['password'])) {
@@ -125,52 +181,231 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 } else {
 
-                    // RESET FAILED ATTEMPTS AFTER SUCCESSFUL LOGIN
-                    $stmt = $pdo->prepare("
-                        UPDATE users
-                        SET failed_attempts = 0,
-                            locked_until = NULL,
-                            lock_tier = 0,
-                            last_login_at = NOW()
-                        WHERE id = ?
-                    ");
+                    /*
+                    |--------------------------------------------------------------------------
+                    | GENERATE LOGIN OTP
+                    |--------------------------------------------------------------------------
+                    */
 
-                    $stmt->execute([$user['id']]);
+                    try {
 
-                    // CREATE LOGIN SESSION
-                    session_regenerate_id(true);
+                        $pdo->beginTransaction();
 
-                    $_SESSION['user'] = [
-                        'id' => $user['id'],
-                        'full_name' => $user['full_name'],
-                        'username' => $user['username'],
-                        'role' => $user['role']
-                    ];
+                        // Generate a secure six-digit OTP.
+                        $otp = (string) random_int(100000, 999999);
 
-                    $_SESSION['last_activity'] = time();
+                        // Hash OTP before storing it.
+                        $otpHash = password_hash(
+                            $otp,
+                            PASSWORD_DEFAULT
+                        );
 
-                    if ($user['role'] === 'admin') {
-                        header('Location: ../admin/admin.php');
-                    } else {
-                        header('Location: ../member/dashboard.php');
+                        // Five-minute expiration.
+                        $expiresAt = date(
+                            'Y-m-d H:i:s',
+                            time() + (5 * 60)
+                        );
+
+                        // Insert the new login OTP.
+                        $insertOtp = $pdo->prepare("
+                            INSERT INTO otps (
+                                user_id,
+                                purpose,
+                                code_hash,
+                                expires_at,
+                                attempts,
+                                used_at
+                            ) VALUES (
+                                ?,
+                                'login',
+                                ?,
+                                ?,
+                                0,
+                                NULL
+                            )
+                        ");
+
+                        $insertOtp->execute([
+                            $user['id'],
+                            $otpHash,
+                            $expiresAt
+                        ]);
+
+                        $newOtpId = (int) $pdo->lastInsertId();
+
+                        // Prepare login verification email.
+                        $subject = 'Your BAUG Login Verification Code';
+
+                        $message = "
+                            <div style='
+                                font-family: Arial, sans-serif;
+                                color: #26352b;
+                                line-height: 1.6;
+                            '>
+
+                                <h2 style='color: #176b3a;'>
+                                    BAUG Login Verification
+                                </h2>
+
+                                <p>
+                                    Hello " . e($user['full_name']) . ",
+                                </p>
+
+                                <p>
+                                    We received a login request for your
+                                    BAUG Member Savings and Loan account.
+                                </p>
+
+                                <p>
+                                    Enter this verification code to
+                                    complete your login:
+                                </p>
+
+                                <h1 style='
+                                    letter-spacing: 8px;
+                                    color: #176b3a;
+                                    font-size: 32px;
+                                '>
+                                    {$otp}
+                                </h1>
+
+                                <p>
+                                    This code expires in 5 minutes.
+                                </p>
+
+                                <p>
+                                    Do not share this code with anyone.
+                                </p>
+
+                                <p>
+                                    If you did not attempt to log in,
+                                    please secure your account.
+                                </p>
+
+                                <p>
+                                    <strong>
+                                        BAUG Member Savings and Loan System
+                                    </strong>
+                                </p>
+
+                            </div>
+                        ";
+
+                        // Send OTP email.
+                        $emailSent = send_email(
+                            $user['email'],
+                            $user['full_name'],
+                            $subject,
+                            $message
+                        );
+
+                        if (!$emailSent) {
+                            throw new RuntimeException(
+                                'The login verification email could not be sent.'
+                            );
+                        }
+
+                        // Cancel previous unused login OTPs.
+                        $cancelOldOtps = $pdo->prepare("
+                            UPDATE otps
+                            SET used_at = NOW()
+                            WHERE user_id = ?
+                            AND purpose = 'login'
+                            AND used_at IS NULL
+                            AND id <> ?
+                        ");
+
+                        $cancelOldOtps->execute([
+                            $user['id'],
+                            $newOtpId
+                        ]);
+
+                        /*
+                         * Initialize the login resend tracker.
+                         * Initial OTP is not counted as a resend.
+                         */
+                        $trackingStmt = $pdo->prepare("
+                            INSERT INTO otp_resend_limits (
+                                user_id,
+                                purpose,
+                                last_sent_at,
+                                window_started_at,
+                                resend_count
+                            ) VALUES (
+                                ?,
+                                'login',
+                                NOW(),
+                                NOW(),
+                                0
+                            )
+                            ON DUPLICATE KEY UPDATE
+                                last_sent_at = NOW(),
+                                window_started_at = NOW(),
+                                resend_count = 0
+                        ");
+
+                        $trackingStmt->execute([
+                            $user['id']
+                        ]);
+
+                        $pdo->commit();
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | CREATE PENDING LOGIN STATE
+                        |--------------------------------------------------------------------------
+                        | Do not create the authenticated user session here.
+                        | The user must verify the login OTP first.
+                        */
+
+                        unset(
+                            $_SESSION['user'],
+                            $_SESSION['last_activity'],
+                            $_SESSION['pending_registration_user_id']
+                        );
+
+                        $_SESSION['pending_login_user_id'] =
+                            (int) $user['id'];
+
+                        header('Location: verify_otp.php');
+                        exit;
+
+                    } catch (Throwable $e) {
+
+                        if ($pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
+
+                        error_log(
+                            'BAUG Login OTP Error: ' . $e->getMessage()
+                        );
+
+                        $error =
+                            'Unable to send your login verification code. Please try again later.';
                     }
-
-                    exit;
                 }
 
             } else {
 
+                // Same message for unknown username and incorrect password.
                 $error = 'Invalid username or password. Please try again.';
 
-                // COUNT FAILED PASSWORD ATTEMPTS
+                /*
+                |--------------------------------------------------------------------------
+                | COUNT FAILED PASSWORD ATTEMPTS
+                |--------------------------------------------------------------------------
+                */
+
                 if ($user) {
 
-                    $failedAttempts = (int) $user['failed_attempts'] + 1;
+                    $failedAttempts =
+                        (int) $user['failed_attempts'] + 1;
+
                     $lockTier = (int) $user['lock_tier'];
 
-                    // APPLY PROGRESSIVE LOCKOUT
                     if ($failedAttempts >= 3) {
 
+                        // Progressive lockout.
                         $lockTier = min($lockTier + 1, 3);
 
                         $lockDurations = [
@@ -181,49 +416,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         $lockSeconds = $lockDurations[$lockTier];
 
-                        $stmt = $pdo->prepare("
+                        $lockStmt = $pdo->prepare("
                             UPDATE users
-                            SET failed_attempts = 0,
+                            SET
+                                failed_attempts = 0,
                                 lock_tier = ?,
-                                locked_until = DATE_ADD(NOW(), INTERVAL ? SECOND)
+                                locked_until = DATE_ADD(
+                                    NOW(),
+                                    INTERVAL ? SECOND
+                                )
                             WHERE id = ?
                         ");
 
-                        $stmt->execute([
+                        $lockStmt->execute([
                             $lockTier,
                             $lockSeconds,
                             $user['id']
                         ]);
 
-                        $error = "Too many failed login attempts. Your account is temporarily locked for {$lockSeconds} seconds.";
+                        $error =
+                            "Too many failed login attempts. Your account is temporarily locked for {$lockSeconds} seconds.";
 
-                        // SEND SECURITY ALERT EMAIL
+                        // SECURITY ALERT EMAIL
                         if (!empty($user['email'])) {
 
-                            $subject = 'BAUG Security Alert: Account Temporarily Locked';
+                            $subject =
+                                'BAUG Security Alert: Account Temporarily Locked';
 
                             $message = "
                                 <h2>Security Alert</h2>
 
-                                <p>Hello " . e($user['full_name']) . ",</p>
-
                                 <p>
-                                    We detected multiple unsuccessful login attempts
-                                    on your BAUG Member Savings and Loan account.
+                                    Hello " . e($user['full_name']) . ",
                                 </p>
 
                                 <p>
-                                    <strong>Account:</strong> " . e($user['username']) . "<br>
-                                    <strong>Lockout duration:</strong> {$lockSeconds} seconds<br>
-                                    <strong>Date and time:</strong> " . date('Y-m-d H:i:s') . "
+                                    We detected multiple unsuccessful
+                                    login attempts on your BAUG account.
                                 </p>
 
                                 <p>
-                                    If this activity was not performed by you,
-                                    please secure your account and contact the administrator.
+                                    <strong>Account:</strong>
+                                    " . e($user['username']) . "
                                 </p>
 
-                                <p>BAUG Member Savings and Loan System</p>
+                                <p>
+                                    <strong>Lockout duration:</strong>
+                                    {$lockSeconds} seconds
+                                </p>
+
+                                <p>
+                                    <strong>Date and time:</strong>
+                                    " . date('Y-m-d H:i:s') . "
+                                </p>
+
+                                <p>
+                                    If this activity was not performed
+                                    by you, please secure your account
+                                    and contact the administrator.
+                                </p>
+
+                                <p>
+                                    BAUG Member Savings and Loan System
+                                </p>
                             ";
 
                             send_email(
@@ -236,18 +491,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     } else {
 
-                        $stmt = $pdo->prepare("
+                        $updateAttempts = $pdo->prepare("
                             UPDATE users
                             SET failed_attempts = ?
                             WHERE id = ?
                         ");
 
-                        $stmt->execute([
+                        $updateAttempts->execute([
                             $failedAttempts,
                             $user['id']
                         ]);
                     }
-                    // SHOW FORGOT PASSWORD AFTER TWO FAILED ATTEMPTS
+
+                    // Show Forgot Password after two failures.
                     if ($failedAttempts >= 2 || $lockTier > 0) {
                         $showForgotPassword = true;
                     }
@@ -257,20 +513,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| GENERATE CAPTCHA
+|--------------------------------------------------------------------------
+*/
 
-// GENERATE CAPTCHA IF NONE EXISTS
 if (empty($_SESSION['captcha'])) {
-
-    $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    $captcha = '';
-
-    for ($i = 0; $i < 5; $i++) {
-        $captcha .= $characters[
-            random_int(0, strlen($characters) - 1)
-        ];
-    }
-
-    $_SESSION['captcha'] = $captcha;
+    $_SESSION['captcha'] = baug_generate_login_captcha();
 }
 
 $pageTitle = 'Member Login';
@@ -288,7 +538,9 @@ require __DIR__ . '/../includes/header.php';
         </div>
 
         <?php if (!empty($error)): ?>
-            <p class="error"><?= e($error) ?></p>
+            <p class="error">
+                <?= e($error) ?>
+            </p>
         <?php endif; ?>
 
         <form method="POST" class="login-form">
@@ -299,6 +551,7 @@ require __DIR__ . '/../includes/header.php';
             <div class="login-field">
 
                 <span class="field-icon">
+
                     <svg xmlns="http://www.w3.org/2000/svg"
                          width="26"
                          height="26"
@@ -313,6 +566,7 @@ require __DIR__ . '/../includes/header.php';
                         <path d="M5 21a7 7 0 0 1 14 0"></path>
 
                     </svg>
+
                 </span>
 
                 <input
@@ -329,6 +583,7 @@ require __DIR__ . '/../includes/header.php';
             <div class="login-field">
 
                 <span class="field-icon">
+
                     <svg xmlns="http://www.w3.org/2000/svg"
                          width="26"
                          height="26"
@@ -339,10 +594,13 @@ require __DIR__ . '/../includes/header.php';
                          stroke-linecap="round"
                          stroke-linejoin="round">
 
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+                        <rect width="18" height="11"
+                              x="3" y="11" rx="2" ry="2"></rect>
+
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
 
                     </svg>
+
                 </span>
 
                 <input
@@ -362,19 +620,20 @@ require __DIR__ . '/../includes/header.php';
                     <?= e($_SESSION['captcha'] ?? '') ?>
                 </div>
 
-                <button
-                    type="button"
+                <a
+                    href="login.php?refresh_captcha=1"
                     class="captcha-refresh"
-                    aria-label="Refresh CAPTCHA">
-
+                    aria-label="Refresh CAPTCHA"
+                    title="Refresh CAPTCHA"
+                >
                     ⟳
-
-                </button>
+                </a>
 
                 <input
                     type="text"
                     name="captcha"
                     placeholder="Enter CAPTCHA"
+                    autocomplete="off"
                     required
                 >
 
@@ -390,11 +649,18 @@ require __DIR__ . '/../includes/header.php';
         <div class="login-links">
 
             <?php if ($showForgotPassword): ?>
-                <a href="forgot_password.php">Forgot Password?</a>
+
+                <a href="forgot_password.php">
+                    Forgot Password?
+                </a>
+
                 <span>|</span>
+
             <?php endif; ?>
 
-            <a href="register.php">Register Here</a>
+            <a href="register.php">
+                Register Here
+            </a>
 
         </div>
 
