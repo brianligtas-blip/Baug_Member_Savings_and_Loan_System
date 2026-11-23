@@ -51,7 +51,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-
 // ==========================================
 // SESSION IDLE WARNING
 // ==========================================
@@ -271,6 +270,68 @@ document.addEventListener('DOMContentLoaded', function () {
             countdownDisplay.textContent =
                 Math.ceil(remainingTime / 1000);
 
+        }
+
+    }, 1000);
+
+});
+
+function toggleLoginPassword() {
+
+    const password = document.getElementById('loginPassword');
+    const button = document.querySelector('.toggle-password');
+
+    if (!password || !button) return;
+
+    if (password.type === 'password') {
+
+        password.type = 'text';
+        button.textContent = 'Hide';
+        button.setAttribute('aria-label', 'Hide password');
+
+    } else {
+
+        password.type = 'password';
+        button.textContent = 'Show';
+        button.setAttribute('aria-label', 'Show password');
+
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const timer = document.getElementById('lockoutTimer');
+    const loginButton = document.getElementById('loginButton');
+    const registerLink = document.getElementById('registerLink');
+
+    if (!timer) return;
+
+    let remaining = parseInt(timer.textContent, 10);
+
+    const countdown = setInterval(function () {
+
+        remaining--;
+
+        timer.textContent = Math.max(remaining, 0);
+
+        if (remaining <= 0) {
+
+            clearInterval(countdown);
+
+            if (loginButton) {
+                loginButton.disabled = false;
+            }
+
+            if (registerLink && registerLink.tagName === 'SPAN') {
+
+                const link = document.createElement('a');
+
+                link.href = 'register.php';
+                link.id = 'registerLink';
+                link.textContent = 'Register Here';
+
+                registerLink.replaceWith(link);
+            }
         }
 
     }, 1000);

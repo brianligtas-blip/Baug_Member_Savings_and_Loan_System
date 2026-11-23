@@ -22,9 +22,8 @@ require 'includes/header.php';
     <section class="home-content">
 
         <div class="home-welcome">
-            <h1>Save. Borrow.</h1>
-            <h1>Grow Together.</h1>
-
+            <h2>Build a strong financial future with community that values savings, support its member and grows through cooperation.</h2>
+            
             <div class="home-actions">
                 <a href="auth/login.php" class="home-login-btn">
                     Member Login

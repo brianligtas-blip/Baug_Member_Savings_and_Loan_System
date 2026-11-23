@@ -281,3 +281,256 @@ function get_flash() {
 
     return $message;
 }
+
+/*
+|--------------------------------------------------------------------------
+| CLIENT IP ADDRESS
+|--------------------------------------------------------------------------
+*/
+
+function get_client_ip(): string
+{
+    // Use the direct connection address.
+    // Do not trust forwarded headers from arbitrary clients.
+    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+}
+
+/*
+|--------------------------------------------------------------------------
+| ACTIVITY LOGGING
+|--------------------------------------------------------------------------
+*/
+
+function log_activity(
+    PDO $pdo,
+    string $eventType,
+    ?string $usernameTyped = null,
+    ?int $userId = null,
+    ?string $details = null
+): bool {
+
+    $stmt = $pdo->prepare("
+        INSERT INTO activity_log (
+            event_type,
+            username_typed,
+            user_id,
+            ip_address,
+            user_agent,
+            details
+        ) VALUES (?, ?, ?, ?, ?, ?)
+    ");
+
+    return $stmt->execute([
+        $eventType,
+        $usernameTyped,
+        $userId,
+        get_client_ip(),
+        substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 1000),
+        $details
+    ]);
+}
+
+/*
+|--------------------------------------------------------------------------
+| SECURITY FLAG CREATION
+|--------------------------------------------------------------------------
+*/
+
+function create_security_flag(
+    PDO $pdo,
+    string $flagType,
+    string $description,
+    string $severity = 'medium',
+    ?int $userId = null
+): bool {
+
+    $allowedSeverities = [
+        'low',
+        'medium',
+        'high',
+        'critical'
+    ];
+
+    if (!in_array($severity, $allowedSeverities, true)) {
+        $severity = 'medium';
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO security_flags (
+            user_id,
+            ip_address,
+            flag_type,
+            description,
+            severity,
+            is_reviewed
+        ) VALUES (?, ?, ?, ?, ?, 0)
+    ");
+
+    return $stmt->execute([
+        $userId,
+        get_client_ip(),
+        $flagType,
+        $description,
+        $severity
+    ]);
+}
+
+/*
+|--------------------------------------------------------------------------
+| IP BLOCK CHECK
+|--------------------------------------------------------------------------
+*/
+
+function check_ip_block(PDO $pdo): array
+{
+    $ipAddress = get_client_ip();
+
+    $stmt = $pdo->prepare("
+        SELECT
+            failed_attempts,
+            window_started_at,
+            blocked_until
+        FROM ip_blocks
+        WHERE ip_address = ?
+        LIMIT 1
+    ");
+
+    $stmt->execute([$ipAddress]);
+
+    $record = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$record) {
+        return [
+            'blocked' => false,
+            'remaining' => 0
+        ];
+    }
+
+    if (empty($record['blocked_until'])) {
+        return [
+            'blocked' => false,
+            'remaining' => 0
+        ];
+    }
+
+    $remaining = strtotime($record['blocked_until']) - time();
+
+    if ($remaining <= 0) {
+        return [
+            'blocked' => false,
+            'remaining' => 0
+        ];
+    }
+
+    return [
+        'blocked' => true,
+        'remaining' => $remaining
+    ];
+}
+
+/*
+|--------------------------------------------------------------------------
+| RECORD FAILED IP ATTEMPT
+|--------------------------------------------------------------------------
+| Tracks failed attempts within the configured time window.
+| The block duration must be supplied according to the handout.
+|--------------------------------------------------------------------------
+*/
+
+function record_ip_failure(
+    PDO $pdo,
+    int $blockSeconds
+): array {
+
+    $settings = security_settings();
+
+    $ipAddress = get_client_ip();
+    $threshold = $settings['ip_threshold'];
+    $windowMinutes = $settings['ip_window_minutes'];
+
+    $stmt = $pdo->prepare("
+        INSERT INTO ip_blocks (
+            ip_address,
+            failed_attempts,
+            window_started_at,
+            blocked_until
+        ) VALUES (
+            ?,
+            1,
+            NOW(),
+            NULL
+        )
+        ON DUPLICATE KEY UPDATE
+
+            failed_attempts = CASE
+                WHEN window_started_at <= DATE_SUB(
+                    NOW(),
+                    INTERVAL {$windowMinutes} MINUTE
+                )
+                THEN 1
+                ELSE failed_attempts + 1
+            END,
+
+            window_started_at = CASE
+                WHEN window_started_at <= DATE_SUB(
+                    NOW(),
+                    INTERVAL {$windowMinutes} MINUTE
+                )
+                THEN NOW()
+                ELSE window_started_at
+            END,
+
+            blocked_until = CASE
+                WHEN window_started_at <= DATE_SUB(
+                    NOW(),
+                    INTERVAL {$windowMinutes} MINUTE
+                )
+                THEN NULL
+                ELSE blocked_until
+            END
+    ");
+
+    $stmt->execute([$ipAddress]);
+
+    $select = $pdo->prepare("
+        SELECT failed_attempts, blocked_until
+        FROM ip_blocks
+        WHERE ip_address = ?
+        LIMIT 1
+    ");
+
+    $select->execute([$ipAddress]);
+
+    $record = $select->fetch(PDO::FETCH_ASSOC);
+
+    $failedAttempts = (int) $record['failed_attempts'];
+
+    if ($failedAttempts >= $threshold) {
+
+        $block = $pdo->prepare("
+            UPDATE ip_blocks
+            SET blocked_until = DATE_ADD(
+                NOW(),
+                INTERVAL ? SECOND
+            )
+            WHERE ip_address = ?
+        ");
+
+        $block->execute([
+            $blockSeconds,
+            $ipAddress
+        ]);
+
+        return [
+            'blocked' => true,
+            'failed_attempts' => $failedAttempts,
+            'block_seconds' => $blockSeconds
+        ];
+    }
+
+    return [
+        'blocked' => false,
+        'failed_attempts' => $failedAttempts,
+        'block_seconds' => 0
+    ];
+}

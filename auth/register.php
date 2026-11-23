@@ -1082,7 +1082,7 @@ function field_error(array $errors, string $key): void {
         <!-- SECURITY QUESTIONS -->
         <section class="form-section">
             <div class="section-heading">
-                <h2>Security Questions</h2>
+                <h2>Authentication Questions</h2>
             </div>
 
             <?php if (!empty($errors['security_questions'])): ?>
@@ -1174,7 +1174,7 @@ function field_error(array $errors, string $key): void {
         <!-- FORM BUTTONS -->
         <div class="form-actions">
             <button type="submit" class="btn btn-primary register-submit">
-            <span>Register Account</span>
+            <span>Create account</span>
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 width="20"

@@ -477,7 +477,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             );
                         }
 
-                        $pdo->commit();
+                       $pdo->commit();
+
+                        // Record successful email verification.
+                        log_activity(
+                            $pdo,
+                            'registration_email_verified',
+                            $user['email'],
+                            $userId,
+                            'Member successfully verified their registration email.'
+                        );
 
                         unset($_SESSION['pending_registration_user_id']);
 
@@ -523,6 +532,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $updateLogin->execute([$userId]);
 
                         $pdo->commit();
+
+                        // Record successful login after OTP verification.
+                        log_activity(
+                            $pdo,
+                            'login_success',
+                            $loginUser['username'],
+                            $userId,
+                            'Member successfully completed login OTP verification.'
+                        );
 
                         // Create the authenticated session only now.
                         session_regenerate_id(true);
