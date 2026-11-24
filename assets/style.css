@@ -2305,7 +2305,6 @@ summary:focus-visible {
     }
 }
 
-
 /* ==========================================
    BAUG REGISTRATION FORM - COMPACT DESIGN
 ========================================== */
@@ -2465,7 +2464,6 @@ summary:focus-visible {
     }
 
 }
-
 
 /* Tablet layout */
 @media (min-width: 600px) and (max-width: 999px) {
@@ -2676,4 +2674,27 @@ summary:focus-visible {
     color: #dc3545;
     font-weight: 600;
     text-align: center;
+}
+.password-input-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+.password-input-wrapper .toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    border: none;
+    background: transparent;
+    color: #198754;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 5px;
+}
+.password-input-wrapper input::-ms-reveal {
+    display: none;
 }

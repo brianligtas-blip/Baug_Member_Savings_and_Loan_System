@@ -57,6 +57,50 @@ $settings = security_settings();
 
 /*
 |--------------------------------------------------------------------------
+| RESTORE ACTIVE ACCOUNT LOCKOUT ON PAGE LOAD
+|--------------------------------------------------------------------------
+*/
+
+if (!empty($_SESSION['login_locked_user_id'])) {
+
+    $lockedUserStmt = $pdo->prepare("
+        SELECT id, locked_until
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+    ");
+
+    $lockedUserStmt->execute([
+        (int) $_SESSION['login_locked_user_id']
+    ]);
+
+    $lockedUser = $lockedUserStmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($lockedUser && !empty($lockedUser['locked_until'])) {
+
+        $lockExpiry = strtotime($lockedUser['locked_until']);
+
+        if ($lockExpiry !== false && $lockExpiry > time()) {
+
+            $lockRemaining = $lockExpiry - time();
+
+            $error = 'Your account is temporarily locked.';
+
+        } else {
+
+            unset($_SESSION['login_locked_user_id']);
+
+        }
+
+    } else {
+
+        unset($_SESSION['login_locked_user_id']);
+
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | HANDLE LOGIN
 |--------------------------------------------------------------------------
 */
@@ -164,6 +208,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    $remaining = $lockExpiry - time();
 
                     $lockRemaining = $remaining;
+
+                    $_SESSION['login_locked_user_id'] = (int) $user['id'];
 
                     $error = "Your account is temporarily locked.";
 
@@ -463,109 +509,316 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if ($user) {
 
-                        $failedAttempts =
-                            (int) $user['failed_attempts'] + 1;
+                        $failedAttempts = 0;
+                        $lockTier = 0;
+                        $newLockoutCreated = false;
+                        $lockoutId = null;
+                        $lockedUntil = null;
 
-                        $lockTier = (int) $user['lock_tier'];
+                        try {
 
-                        if ($failedAttempts >= 3) {
+                            // Start a transaction to prevent simultaneous lockout processing.
+                            $pdo->beginTransaction();
 
-                            // Progressive lockout.
-                            $lockTier = min($lockTier + 1, 3);
-
-                            $lockDurations = [
-                                1 => $settings['lock_tier_1'],
-                                2 => $settings['lock_tier_2'],
-                                3 => $settings['lock_tier_3']
-                            ];
-
-                            $lockSeconds = $lockDurations[$lockTier];
-
-                            $lockStmt = $pdo->prepare("
-                                UPDATE users
-                                SET
-                                    failed_attempts = 0,
-                                    lock_tier = ?,
-                                    locked_until = DATE_ADD(
-                                        NOW(),
-                                        INTERVAL ? SECOND
-                                    )
+                            // Get the latest user data and lock this user's database row.
+                            $lockUserStmt = $pdo->prepare("
+                                SELECT
+                                    id,
+                                    full_name,
+                                    email,
+                                    username,
+                                    failed_attempts,
+                                    lock_tier,
+                                    locked_until
+                                FROM users
                                 WHERE id = ?
+                                LIMIT 1
+                                FOR UPDATE
                             ");
 
-                            $lockStmt->execute([
-                                $lockTier,
-                                $lockSeconds,
-                                $user['id']
-                            ]);
+                            $lockUserStmt->execute([(int) $user['id']]);
 
-                            $error =
-                                "Too many failed login attempts. Your account is temporarily locked for {$lockSeconds} seconds.";
+                            $lockedUser = $lockUserStmt->fetch(PDO::FETCH_ASSOC);
 
-                            // SECURITY ALERT EMAIL
-                            if (!empty($user['email'])) {
-
-                                $subject =
-                                    'BAUG Security Alert: Account Temporarily Locked';
-
-                                $message = "
-                                    <h2>Security Alert</h2>
-
-                                    <p>
-                                        Hello " . e($user['full_name']) . ",
-                                    </p>
-
-                                    <p>
-                                        We detected multiple unsuccessful
-                                        login attempts on your BAUG account.
-                                    </p>
-
-                                    <p>
-                                        <strong>Account:</strong>
-                                        " . e($user['username']) . "
-                                    </p>
-
-                                    <p>
-                                        <strong>Lockout duration:</strong>
-                                        {$lockSeconds} seconds
-                                    </p>
-
-                                    <p>
-                                        <strong>Date and time:</strong>
-                                        " . date('Y-m-d H:i:s') . "
-                                    </p>
-
-                                    <p>
-                                        If this activity was not performed
-                                        by you, please secure your account
-                                        and contact the administrator.
-                                    </p>
-
-                                    <p>
-                                        BAUG Member Savings and Loan System
-                                    </p>
-                                ";
-
-                                send_email(
-                                    $user['email'],
-                                    $user['full_name'],
-                                    $subject,
-                                    $message
-                                );
+                            if (!$lockedUser) {
+                                throw new RuntimeException('User record not found during lockout processing.');
                             }
 
-                        } else {
+                            // Use the latest database values.
+                            $user = $lockedUser;
 
-                            $updateAttempts = $pdo->prepare("
-                                UPDATE users
-                                SET failed_attempts = ?
-                                WHERE id = ?
-                            ");
+                            $failedAttempts = (int) $user['failed_attempts'];
+                            $lockTier = (int) $user['lock_tier'];
 
-                            $updateAttempts->execute([
-                                $failedAttempts,
-                                $user['id']
-                            ]);
+                            $accountIsLocked = false;
+
+                            // Check whether another request has already locked this account.
+                            if (!empty($user['locked_until'])) {
+
+                                $existingLockExpiry = strtotime($user['locked_until']);
+
+                                if (
+                                    $existingLockExpiry !== false &&
+                                    $existingLockExpiry > time()
+                                ) {
+
+                                    $lockRemaining = $existingLockExpiry - time();
+
+                                    $_SESSION['login_locked_user_id'] = (int) $user['id'];
+
+                                    $error = 'Your account is temporarily locked.';
+
+                                    $accountIsLocked = true;
+
+                                } else {
+
+                                    // Previous lockout has expired.
+                                    $failedAttempts++;
+                                }
+
+                            } else {
+
+                                $failedAttempts++;
+                            }
+
+                            // Only process a new failure if the account is not currently locked.
+                            if (!$accountIsLocked) {
+
+                                if ($failedAttempts >= 3) {
+
+                                    // Progressive lockout.
+                                    $lockTier = min($lockTier + 1, 3);
+
+                                    $lockDurations = [
+                                        1 => $settings['lock_tier_1'],
+                                        2 => $settings['lock_tier_2'],
+                                        3 => $settings['lock_tier_3']
+                                    ];
+
+                                    $lockSeconds = $lockDurations[$lockTier];
+
+                                    $lockRemaining = $lockSeconds;
+
+                                    $_SESSION['login_locked_user_id'] = (int) $user['id'];
+
+                                    // Update the account lockout.
+                                    $lockStmt = $pdo->prepare("
+                                        UPDATE users
+                                        SET
+                                            failed_attempts = 0,
+                                            lock_tier = ?,
+                                            locked_until = DATE_ADD(
+                                                NOW(),
+                                                INTERVAL ? SECOND
+                                            )
+                                        WHERE id = ?
+                                    ");
+
+                                    $lockStmt->execute([
+                                        $lockTier,
+                                        $lockSeconds,
+                                        $user['id']
+                                    ]);
+
+                                    // Retrieve the exact lockout expiration time.
+                                    $expiryStmt = $pdo->prepare("
+                                        SELECT locked_until
+                                        FROM users
+                                        WHERE id = ?
+                                        LIMIT 1
+                                    ");
+
+                                    $expiryStmt->execute([(int) $user['id']]);
+
+                                    $lockedUntil = $expiryStmt->fetchColumn();
+                                   
+                                    // Register this lockout event only if this tier has no alert yet.
+                                    $alertStmt = $pdo->prepare("
+                                        INSERT IGNORE INTO lockout_alerts (
+                                            user_id,
+                                            lock_tier,
+                                            locked_until,
+                                            email_sent
+                                        ) VALUES (?, ?, ?, 0)
+                                    ");
+
+                                    $alertStmt->execute([
+                                        $user['id'],
+                                        $lockTier,
+                                        $lockedUntil
+                                    ]);
+
+                                    // Send an email only if a new tier record was created.
+                                    if ($alertStmt->rowCount() === 1) {
+
+                                        $lockoutId = (int) $pdo->lastInsertId();
+
+                                        $newLockoutCreated = true;
+
+                                    } else {
+
+                                        $lockoutId = null;
+
+                                        $newLockoutCreated = false;
+                                    }
+
+
+                                    $error =
+                                        "Too many failed login attempts. Your account is temporarily locked for {$lockSeconds} seconds.";
+
+                                } else {
+
+                                    // Update failed attempts without locking the account.
+                                    $updateAttempts = $pdo->prepare("
+                                        UPDATE users
+                                        SET failed_attempts = ?
+                                        WHERE id = ?
+                                    ");
+
+                                    $updateAttempts->execute([
+                                        $failedAttempts,
+                                        $user['id']
+                                    ]);
+                                }
+                            }
+
+                            // Commit database changes before sending email.
+                            $pdo->commit();
+
+                        } catch (Throwable $e) {
+
+                            if ($pdo->inTransaction()) {
+                                $pdo->rollBack();
+                            }
+
+                            error_log('BAUG LOCKOUT ERROR: ' . $e->getMessage());
+
+                            $error = 'Unable to process your login attempt. Please try again.';
+                        }
+
+                        // Send an alert only when a new lockout event was created.
+                        if (
+                            $newLockoutCreated &&
+                            !empty($user['email']) &&
+                            $lockoutId !== null
+                        ) {
+
+                            $subject = 'Failed sign-in attempts on your account';
+
+                            $philippineTime = (
+                                new DateTimeImmutable(
+                                    'now',
+                                    new DateTimeZone('Asia/Manila')
+                                )
+                            )->format('F j, Y h:i:s A');
+
+                            $ipAddress = get_client_ip();
+
+                            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+
+                            $forgotPasswordUrl =
+                                'http://localhost/Baug_Member_Savings_and_Loan_System/auth/forgot_password.php';
+
+                            $message = "
+                                <h2>BAUG Security Alert</h2>
+
+                                <p>
+                                    Hello " . e($user['full_name']) . ",
+                                </p>
+
+                                <p>
+                                    We detected multiple unsuccessful login attempts
+                                    on your BAUG account.
+                                </p>
+
+                                <p>
+                                    <strong>Account:</strong>
+                                    " . e($user['username']) . "
+                                </p>
+
+                                <p>
+                                    <strong>Number of failed attempts:</strong>
+                                    {$failedAttempts}
+                                </p>
+
+                                <p>
+                                    <strong>Lockout tier:</strong>
+                                    {$lockTier}
+                                </p>
+
+                                <p>
+                                    <strong>Lockout duration:</strong>
+                                    {$lockSeconds} seconds
+                                </p>
+
+                                <p>
+                                    <strong>Date and time (Philippine Time):</strong>
+                                    " . e($philippineTime) . "
+                                </p>
+
+                                <p>
+                                    <strong>IP address:</strong>
+                                    " . e($ipAddress) . "
+                                </p>
+
+                                <p>
+                                    <strong>Browser / Device:</strong>
+                                    " . e($userAgent) . "
+                                </p>
+
+                                <p>
+                                    If this was not you, reset your password now.
+                                </p>
+
+                                <p>
+                                    <a href='" . e($forgotPasswordUrl) . "'>
+                                        Reset Your Password
+                                    </a>
+                                </p>
+
+                                <p>
+                                    BAUG Member Savings and Loan System
+                                </p>
+                            ";
+
+                            $emailSent = send_email(
+                                $user['email'],
+                                $user['full_name'],
+                                $subject,
+                                $message
+                            );
+
+                            // Mark the email as sent only when sending succeeds.
+                            if ($emailSent) {
+
+                                $sentStmt = $pdo->prepare("
+                                    UPDATE lockout_alerts
+                                    SET email_sent = 1
+                                    WHERE id = ?
+                                ");
+
+                                $sentStmt->execute([$lockoutId]);
+
+                                log_activity(
+                                    $pdo,
+                                    'ALERT_EMAIL_SENT',
+                                    $user['username'],
+                                    (int) $user['id'],
+                                    'Account lockout security alert email sent.'
+                                );
+                            }
+                        }
+
+                        // Record the lockout tier in the activity log.
+                        if ($newLockoutCreated) {
+
+                            log_activity(
+                                $pdo,
+                                'LOCKOUT_TIER_' . $lockTier,
+                                $user['username'],
+                                (int) $user['id'],
+                                "Account locked for {$lockSeconds} seconds."
+                            );
                         }
 
                         // Show Forgot Password after two failures.

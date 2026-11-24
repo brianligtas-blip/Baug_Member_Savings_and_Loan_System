@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '/Baug_Member_Savings_and_Loan_System/auth/session_activity.php';
 
     const LOGIN_URL =
-        '/Baug_Member_Savings_and_Loan_System/auth/login.php?timeout=1';
+    '/Baug_Member_Savings_and_Loan_System/auth/logout.php';
 
     let lastActivity = Date.now();
     let warningVisible = false;
@@ -255,9 +255,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const remainingTime = IDLE_LIMIT - inactiveTime;
 
         if (remainingTime <= 0) {
-
+            console.log('IDLE TIMEOUT REACHED. Redirecting to:', LOGIN_URL);
             window.location.href = LOGIN_URL;
-
             return;
         }
 
