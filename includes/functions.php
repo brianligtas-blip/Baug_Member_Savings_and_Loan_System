@@ -534,3 +534,17 @@ function record_ip_failure(
         'block_seconds' => 0
     ];
 }
+
+function baug_generate_login_captcha(): string
+{
+    $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $captcha = '';
+
+    for ($i = 0; $i < 5; $i++) {
+        $captcha .= $characters[
+            random_int(0, strlen($characters) - 1)
+        ];
+    }
+
+    return $captcha;
+}

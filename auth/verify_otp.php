@@ -20,15 +20,31 @@ $notice = '';
 $registrationMode = !empty($_SESSION['pending_registration_user_id']);
 $loginMode = !empty($_SESSION['pending_login_user_id']);
 
-if ($registrationMode && !$loginMode) {
+$recoveryMode =
+    !empty($_SESSION['recovery_user_id']) &&
+    !empty($_SESSION['recovery_questions_verified']) &&
+    $_SESSION['recovery_questions_verified'] === true;
+
+if ($registrationMode && !$loginMode && !$recoveryMode) {
+
     $purpose = 'register';
     $userId = (int) $_SESSION['pending_registration_user_id'];
     $pageTitle = 'Verify Your Email';
-} elseif ($loginMode && !$registrationMode) {
+
+} elseif ($loginMode && !$registrationMode && !$recoveryMode) {
+
     $purpose = 'login';
     $userId = (int) $_SESSION['pending_login_user_id'];
     $pageTitle = 'Verify Your Login';
+
+} elseif ($recoveryMode && !$registrationMode && !$loginMode) {
+
+    $purpose = 'reset';
+    $userId = (int) $_SESSION['recovery_user_id'];
+    $pageTitle = 'Verify Password Reset';
+
 } else {
+
     header('Location: login.php');
     exit;
 }
@@ -74,6 +90,24 @@ if (
 ) {
     unset($_SESSION['pending_login_user_id']);
     header('Location: login.php');
+    exit;
+}
+
+if (
+    $purpose === 'reset' &&
+    (
+        (int) $user['email_verified'] !== 1 ||
+        $user['account_status'] !== 'active'
+    )
+) {
+    unset(
+        $_SESSION['recovery_user_id'],
+        $_SESSION['recovery_questions_verified'],
+        $_SESSION['recovery_otp_verified'],
+        $_SESSION['recovery_otp_verified_at']
+    );
+
+    header('Location: forgot_password.php');
     exit;
 }
 
@@ -223,11 +257,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $heading = 'BAUG Email Verification';
                 $description = 'Your new account verification code is:';
 
-            } else {
+            } elseif ($purpose === 'login') {
 
                 $subject = 'Your BAUG Login Verification Code';
                 $heading = 'BAUG Login Verification';
                 $description = 'Use this code to complete your login:';
+
+            } elseif ($purpose === 'reset') {
+
+                $subject = 'Your BAUG Password Reset Verification Code';
+                $heading = 'BAUG Password Reset Verification';
+                $description = 'Use this code to verify your password reset request:';
+
+            } else {
+
+                throw new RuntimeException('Invalid OTP purpose.');
+
             }
 
             $emailMessage = "
@@ -493,7 +538,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $success =
                             'Your email has been verified successfully. Your account is now awaiting administrator approval.';
 
-                    } else {
+                    } elseif ($purpose === 'login') {
 
                         // Recheck the account before creating a login session.
                         $loginUserStmt = $pdo->prepare("
@@ -563,27 +608,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         exit;
+
+                        } elseif ($purpose === 'reset') {
+
+                            // Recheck account eligibility before authorizing password change.
+                            $resetUserStmt = $pdo->prepare("
+                                SELECT id, email_verified, account_status
+                                FROM users
+                                WHERE id = ?
+                                LIMIT 1
+                                FOR UPDATE
+                            ");
+
+                            $resetUserStmt->execute([$userId]);
+                            $resetUser = $resetUserStmt->fetch(PDO::FETCH_ASSOC);
+
+                            if (
+                                !$resetUser ||
+                                (int) $resetUser['email_verified'] !== 1 ||
+                                $resetUser['account_status'] !== 'active'
+                            ) {
+                                throw new RuntimeException(
+                                    'This account is no longer eligible for password recovery.'
+                                );
+                            }
+
+                            $pdo->commit();
+
+                            // Authorize password change only after successful reset OTP.
+                            session_regenerate_id(true);
+
+                            $_SESSION['recovery_otp_verified'] = true;
+                            $_SESSION['recovery_otp_verified_at'] = time();
+
+                            unset($_SESSION['recovery_questions_verified']);
+
+                            log_activity(
+                                $pdo,
+                                'password_reset_otp_verified',
+                                $user['email'],
+                                $userId,
+                                'Member successfully verified the password reset OTP.'
+                            );
+
+                            header('Location: reset_password.php');
+                            exit;
+                        }
                     }
-                }
 
             } catch (Throwable $e) {
 
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-
-                error_log('BAUG OTP Verification Error: ' . $e->getMessage());
-
-                $errors['otp'] =
-                    'Unable to verify your code at this time. Please try again.';
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
             }
+
+            error_log('BAUG OTP Verification Error: ' . $e->getMessage());
+
+            $errors['general'] =
+                'Unable to verify your code at this time. Please try again.';
+
         }
 
-    } else {
+        } // Close the OTP input validation else block.
 
-        $errors['general'] = 'Invalid request. Please try again.';
-    }
-}
+    } // Close the verify action.
+
+} // Close the POST request.
 
 /*
 |--------------------------------------------------------------------------
@@ -642,16 +732,20 @@ require __DIR__ . '/../includes/header.php';
 
         <p class="otp-eyebrow">BAUG MEMBER SYSTEM</p>
 
-        <h1>
+       <h1>
             <?= $purpose === 'register'
                 ? 'Verify Your Email'
-                : 'Verify Your Login' ?>
+                : ($purpose === 'reset'
+                    ? 'Verify Your Password Reset'
+                    : 'Verify Your Login') ?>
         </h1>
 
         <p class="otp-description">
             <?= $purpose === 'register'
                 ? 'Your account is almost ready. Enter the six-digit verification code sent to your registered email address.'
-                : 'For your account security, enter the six-digit login verification code sent to your registered email address.' ?>
+                : ($purpose === 'reset'
+                    ? 'Enter the six-digit password reset verification code sent to your registered email address.'
+                    : 'For your account security, enter the six-digit login verification code sent to your registered email address.') ?>
         </p>
 
         <?php if ($success !== ''): ?>
@@ -710,7 +804,9 @@ require __DIR__ . '/../includes/header.php';
                 <button type="submit" class="otp-button">
                     <?= $purpose === 'register'
                         ? 'Verify Email'
-                        : 'Verify Login' ?>
+                        : ($purpose === 'reset'
+                            ? 'Verify Password Reset'
+                            : 'Verify Login') ?>
                 </button>
 
             </form>

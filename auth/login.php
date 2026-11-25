@@ -10,19 +10,7 @@ require_once __DIR__ . '/../includes/mailer.php';
 |--------------------------------------------------------------------------
 */
 
-function baug_generate_login_captcha(): string
-{
-    $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    $captcha = '';
 
-    for ($i = 0; $i < 5; $i++) {
-        $captcha .= $characters[
-            random_int(0, strlen($characters) - 1)
-        ];
-    }
-
-    return $captcha;
-}
 
 // Refresh CAPTCHA when requested.
 if (isset($_GET['refresh_captcha'])) {
@@ -981,7 +969,6 @@ require __DIR__ . '/../includes/header.php';
                     autocomplete="off"
                     required
                 >
-
             </div>
 
             <!-- Login Button -->

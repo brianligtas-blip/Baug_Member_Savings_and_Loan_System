@@ -13,25 +13,25 @@ $pageTitle = 'Reset Password';
 $error = '';
 $success = '';
 
-// REQUIRE SUCCESSFUL SECURITY-QUESTION VERIFICATION
+// REQUIRE SUCCESSFUL PASSWORD RESET OTP VERIFICATION
 if (
-    empty($_SESSION['recovery_verified']) ||
-    $_SESSION['recovery_verified'] !== true ||
+    empty($_SESSION['recovery_otp_verified']) ||
+    $_SESSION['recovery_otp_verified'] !== true ||
     empty($_SESSION['recovery_user_id']) ||
-    empty($_SESSION['recovery_verified_at'])
+    empty($_SESSION['recovery_otp_verified_at'])
 ) {
     header('Location: forgot_password.php');
     exit;
 }
 
 // VERIFICATION AUTHORIZATION EXPIRES AFTER 10 MINUTES
-if (time() - $_SESSION['recovery_verified_at'] > 600) {
+if (time() - $_SESSION['recovery_otp_verified_at'] > 600) {
 
     unset(
         $_SESSION['recovery_user_id'],
-        $_SESSION['recovery_verified'],
-        $_SESSION['recovery_verified_at'],
-        $_SESSION['recovery_email']
+        $_SESSION['recovery_questions_verified'],
+        $_SESSION['recovery_otp_verified'],
+        $_SESSION['recovery_otp_verified_at']
     );
 
     header('Location: forgot_password.php');
@@ -220,12 +220,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             throw $e;
                         }
 
+                        // RECORD SUCCESSFUL PASSWORD CHANGE
+                        log_activity(
+                            $pdo,
+                            'password_changed',
+                            $user['username'],
+                            $userId,
+                            'Member successfully changed their password through password recovery.'
+                        );
+
                         // REMOVE RECOVERY AUTHORIZATION
                         unset(
                             $_SESSION['recovery_user_id'],
                             $_SESSION['recovery_verified'],
                             $_SESSION['recovery_verified_at'],
-                            $_SESSION['recovery_email']
+                            $_SESSION['recovery_email'],
+                            $_SESSION['recovery_questions_verified'],
+                            $_SESSION['recovery_otp_verified'],
+                            $_SESSION['recovery_otp_verified_at']
                         );
 
                         // REGENERATE CSRF TOKEN
@@ -233,16 +245,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             random_bytes(32)
                         );
 
-                        // SEND PASSWORD RESET NOTIFICATION
-                        $subject = 'BAUG Security Alert: Password Reset';
+                        // SEND PASSWORD CHANGE NOTIFICATION
+                        $subject = 'Your password was changed';
 
                         $message = "
-                            <h2>Password Reset Notification</h2>
+                            <h2>Password Change Notification</h2>
 
                             <p>Hello " . e($user['full_name']) . ",</p>
 
-                            <p>Your BAUG Member Savings and Loan System
-                            password has been successfully reset.</p>
+                            <p>Your password was changed successfully.</p>
 
                             <p><strong>Account:</strong> "
                                 . e($user['username']) . "</p>
@@ -251,7 +262,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 . date('Y-m-d H:i:s') . "</p>
 
                             <p>If you did not perform this action,
-                            please contact the administrator immediately.</p>
+                            please reset your password immediately
+                            or contact the administrator.</p>
 
                             <p>BAUG Member Savings and Loan System</p>
                         ";
@@ -268,7 +280,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             );
                         }
 
+                        // RECORD SUCCESSFUL EMAIL NOTIFICATION
                         if ($emailSent) {
+
+                            log_activity(
+                                $pdo,
+                                'ALERT_EMAIL_SENT',
+                                $user['username'],
+                                $userId,
+                                'Password change notification email successfully sent.'
+                            );
 
                             $success = 'Your password has been successfully reset. A notification email has been sent to your registered email address. You may now log in.';
 
@@ -280,6 +301,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
             } catch (Throwable $e) {
+
+                error_log(
+                    'BAUG Password Reset Error: ' . $e->getMessage()
+                );
 
                 $error = 'Something went wrong. Please try again later.';
             }
@@ -297,10 +322,8 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="login-title"
              style="flex-direction: column; gap: 8px; margin-bottom: 12px;">
 
-            <span style="font-size: 40px; color: #075b37;">🔐</span>
-
             <h1 style="font-size: 22px; color: #064b2e;">
-                Reset Password
+                RESET PASSWORD
             </h1>
 
         </div>
@@ -358,7 +381,21 @@ require_once __DIR__ . '/../includes/header.php';
 
                     <div class="login-field">
 
-                        <span>🔑</span>
+                        <span>
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                class="lucide lucide-key-round">
+                                <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/>
+                                <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
+                            </svg>
+                        </span>
 
                         <input
                             type="password"
@@ -387,7 +424,21 @@ require_once __DIR__ . '/../includes/header.php';
 
                     <div class="login-field">
 
-                        <span>🔑</span>
+                       <span>
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                class="lucide lucide-key-round">
+                                <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/>
+                                <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
+                            </svg>
+                        </span>
 
                         <input
                             type="password"
