@@ -475,7 +475,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
 
                     // Same message for unknown username and incorrect password.
-                    $error = 'Invalid username or password. Please try again.';
+                    $error = 'Invalid username or password.';
 
                     // Record unsuccessful login attempt.
                     log_activity(
