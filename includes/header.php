@@ -48,6 +48,11 @@ $logoutPageUrl = $baseUrl . 'auth/logout.php';
     <link rel="stylesheet"
           href="<?= e($baseUrl) ?>assets/style.css">
 
+          <?php if ($currentPage === 'security_dashboard.php'): ?>
+            <link rel="stylesheet"
+                href="<?= e($baseUrl) ?>assets/css/security_dashboard.css">
+        <?php endif; ?>
+
     <script
         src="<?= e($baseUrl) ?>assets/app.js"
         defer>

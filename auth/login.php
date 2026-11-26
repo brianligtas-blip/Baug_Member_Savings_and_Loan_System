@@ -445,11 +445,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             unset(
                                 $_SESSION['user'],
                                 $_SESSION['last_activity'],
-                                $_SESSION['pending_registration_user_id']
+                                $_SESSION['pending_registration_user_id'],
+                                $_SESSION['recovery_user_id'],
+                                $_SESSION['recovery_questions_verified'],
+                                $_SESSION['recovery_otp_verified'],
+                                $_SESSION['recovery_otp_verified_at']
                             );
 
-                            $_SESSION['pending_login_user_id'] =
-                                (int) $user['id'];
+                            // Start a fresh login OTP verification.
+                            $_SESSION['pending_login_user_id'] = (int) $user['id'];
 
                             header('Location: verify_otp.php');
                             exit;

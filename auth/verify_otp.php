@@ -370,7 +370,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             $notice = 'A new verification code has been sent to your registered email address.';
-            
+
         } catch (PDOException $e) {
 
             if ($pdo->inTransaction()) {

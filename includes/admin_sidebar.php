@@ -30,5 +30,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <i class="fas fa-chart-line"></i>
             <span>Reports & Activities</span>
         </a>
+        <a href="security_dashboard.php" class="<?= $currentPage === 'security_dashboard.php' ? 'active' : '' ?>">
+            <i class="fas fa-shield-alt"></i>
+            <span>Security Monitoring</span>
+        </a>
     </nav>
 </aside>
