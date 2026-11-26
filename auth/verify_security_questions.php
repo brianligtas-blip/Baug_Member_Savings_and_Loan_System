@@ -33,6 +33,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             id,
+            username,
             full_name,
             email,
             email_verified,
@@ -151,7 +152,7 @@ if (
                 log_activity(
                     $pdo,
                     'IP_BLOCKED',
-                    $user['email'],
+                    $user['username'],
                     $userId,
                     'IP address temporarily blocked after repeated failed security verification attempts.'
                 );
@@ -435,6 +436,7 @@ if (
                 $accountStmt = $pdo->prepare("
                     SELECT
                         id,
+                        username,
                         full_name,
                         email,
                         email_verified,
@@ -587,8 +589,8 @@ if (
 
                 log_activity(
                     $pdo,
-                    'password_reset_otp_sent',
-                    $currentUser['email'],
+                    'OTP_SENT',
+                    $currentUser['username'],
                     $userId,
                     'Password reset OTP sent after successful security question verification.'
                 );

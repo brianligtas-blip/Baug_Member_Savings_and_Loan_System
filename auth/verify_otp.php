@@ -56,7 +56,7 @@ if ($registrationMode && !$loginMode && !$recoveryMode) {
 */
 
 $userStmt = $pdo->prepare("
-    SELECT id, full_name, email, email_verified, account_status, role
+    SELECT id, full_name, email, username, email_verified, account_status, role
     FROM users
     WHERE id = ?
     LIMIT 1
@@ -187,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Recheck the account before sending another OTP.
             $userStmt = $pdo->prepare("
-                SELECT full_name, email, email_verified, account_status
+                SELECT full_name, email, username, email_verified, account_status
                 FROM users
                 WHERE id = ?
                 LIMIT 1
@@ -360,8 +360,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
 
-            $notice = 'A new verification code has been sent to your registered email address.';
+            // Log successfully resent OTP.
+            log_activity(
+                $pdo,
+                'OTP_SENT',
+                $user['username'],
+                $userId,
+                'OTP resend email sent successfully for ' . strtoupper($purpose) . ' verification.'
+            );
 
+            $notice = 'A new verification code has been sent to your registered email address.';
+            
         } catch (PDOException $e) {
 
             if ($pdo->inTransaction()) {
@@ -446,6 +455,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $pdo->rollBack();
 
+                    // Log expired OTP attempt.
+                    log_activity(
+                        $pdo,
+                        'OTP_FAILED',
+                        $user['username'],
+                        $userId,
+                        'Expired OTP entered for ' . strtoupper($purpose) . ' verification.'
+                    );
+
                     $errors['otp'] =
                         'Your verification code has expired. Please request a new code.';
 
@@ -469,6 +487,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $updateAttempts->execute([$otpRecord['id']]);
 
                     $pdo->commit();
+
+                    // Log incorrect OTP attempt.
+                    log_activity(
+                        $pdo,
+                        'OTP_FAILED',
+                        $user['username'],
+                        $userId,
+                        'Incorrect OTP entered for ' . strtoupper($purpose) . ' verification.'
+                    );
 
                     if ($newAttempts >= 3) {
 
@@ -524,11 +551,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                        $pdo->commit();
 
-                        // Record successful email verification.
+                        // Record successful registration verification.
                         log_activity(
                             $pdo,
-                            'registration_email_verified',
-                            $user['email'],
+                            'ACCOUNT_VERIFIED',
+                            $user['username'],
                             $userId,
                             'Member successfully verified their registration email.'
                         );
@@ -581,7 +608,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Record successful login after OTP verification.
                         log_activity(
                             $pdo,
-                            'login_success',
+                            'LOGIN_SUCCESS',
                             $loginUser['username'],
                             $userId,
                             'Member successfully completed login OTP verification.'
@@ -729,8 +756,6 @@ require __DIR__ . '/../includes/header.php';
 <main class="otp-page">
 
     <section class="otp-card">
-
-        <p class="otp-eyebrow">BAUG MEMBER SYSTEM</p>
 
        <h1>
             <?= $purpose === 'register'

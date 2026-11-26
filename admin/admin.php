@@ -5,6 +5,15 @@ require_once __DIR__ . '/../config/database.php';
 
 require_admin();
 
+// LOG ADMIN DASHBOARD ACCESS
+log_activity(
+    $pdo,
+    'ADMIN_VIEWED_DASHBOARD',
+    current_user()['username'] ?? null,
+    (int) current_user()['id'],
+    'Administrator successfully viewed the admin dashboard.'
+);
+
 /* ==========================================
    DASHBOARD STATISTICS
 ========================================== */

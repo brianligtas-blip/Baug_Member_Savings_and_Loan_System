@@ -652,6 +652,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $newUserId = (int)$pdo->lastInsertId();
 
+                    // LOG SUCCESSFUL REGISTRATION
+                    log_activity(
+                        $pdo,
+                        'REGISTERED',
+                        $username,
+                        $newUserId,
+                        'New member account registered and awaiting email verification.'
+                    );
+
                     // SAVE INITIAL PASSWORD TO PASSWORD HISTORY
                     $historyStmt = $pdo->prepare("
                         INSERT INTO password_history (user_id, password_hash)
@@ -706,6 +715,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'BAUG Registration Verification Code',
                         $emailMessage
                     );
+
+                    // LOG OTP SENT ONLY IF EMAIL WAS SUCCESSFULLY SENT
+                    if ($emailSent) {
+                        log_activity(
+                            $pdo,
+                            'OTP_SENT',
+                            $username,
+                            $newUserId,
+                            'Registration verification OTP emailed successfully.'
+                        );
+                    }
 
                     $_SESSION['pending_registration_user_id'] = $newUserId;
 

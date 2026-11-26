@@ -223,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // RECORD SUCCESSFUL PASSWORD CHANGE
                         log_activity(
                             $pdo,
-                            'password_changed',
+                            'PASSWORD_CHANGED',
                             $user['username'],
                             $userId,
                             'Member successfully changed their password through password recovery.'

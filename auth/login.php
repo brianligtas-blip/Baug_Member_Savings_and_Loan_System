@@ -425,6 +425,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             $pdo->commit();
 
+                            // LOG SUCCESSFUL LOGIN OTP EMAIL
+                            log_activity(
+                                $pdo,
+                                'OTP_SENT',
+                                $user['username'],
+                                (int) $user['id'],
+                                'Login verification OTP emailed successfully.'
+                            );
+
                             /*
                             |--------------------------------------------------------------------------
                             | CREATE PENDING LOGIN STATE

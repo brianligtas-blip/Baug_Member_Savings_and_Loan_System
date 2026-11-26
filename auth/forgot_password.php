@@ -97,11 +97,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['recovery_verified_at'],
                     $_SESSION['recovery_questions_verified'],
                     $_SESSION['recovery_otp_verified'],
-                    $_SESSION['recovery_otp_verified_at']
+                    $_SESSION['recovery_otp_verified_at'],
+                    $_SESSION['pending_registration_user_id'],
+                    $_SESSION['pending_login_user_id']
                 );
 
                 // Save the identified account for security-question verification.
                 $_SESSION['recovery_user_id'] = (int) $user['id'];
+
+                // Log password recovery request.
+                log_activity(
+                    $pdo,
+                    'RESET_REQUESTED',
+                    $user['username'],
+                    (int) $user['id'],
+                    'Member initiated the password recovery process.'
+                );
 
                 header('Location: verify_security_questions.php');
                 exit;

@@ -170,7 +170,19 @@ function require_admin(): void
 
     // Allow administrators only.
     if (strtolower(trim($role)) !== 'admin') {
+
+        log_activity(
+            $GLOBALS['pdo'],
+            'ADMIN_ACCESS_DENIED',
+            current_user()['username'] ?? null,
+            isset(current_user()['id'])
+                ? (int) current_user()['id']
+                : null,
+            'Non-administrator attempted to access an admin-only page.'
+        );
+
         http_response_code(403);
+
         exit('Access denied. You are not authorized to access this page.');
     }
 }
@@ -212,6 +224,20 @@ function verify_csrf() {
         $storedToken === '' ||
         !hash_equals($storedToken, $submittedToken)
     ) {
+
+        // Record rejected CSRF request.
+        if (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+
+            log_activity(
+                $GLOBALS['pdo'],
+                'CSRF_REJECTED',
+                null,
+                isset($_SESSION['user']['id'])
+                    ? (int) $_SESSION['user']['id']
+                    : null,
+                'Request rejected because the CSRF token was invalid or missing.'
+            );
+        }
 
         http_response_code(403);
 
