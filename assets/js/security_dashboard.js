@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return cell;
     }
-
+    
     // Display a message inside a table.
     function showTableMessage(elementId, message, columnCount) {
 
@@ -40,11 +40,26 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('totalEvents').textContent =
             Number(summary.total_events).toLocaleString();
 
+        document.getElementById('successfulLogins').textContent =
+            Number(summary.successful_logins).toLocaleString();
+
         document.getElementById('failedLogins').textContent =
             Number(summary.failed_logins).toLocaleString();
 
+        document.getElementById('lockedAccounts').textContent =
+            Number(summary.locked_accounts).toLocaleString();
+
         document.getElementById('blockedIps').textContent =
             Number(summary.blocked_ips).toLocaleString();
+
+        document.getElementById('otpSent').textContent =
+            Number(summary.otp_sent).toLocaleString();
+
+        document.getElementById('otpFailed').textContent =
+            Number(summary.otp_failed).toLocaleString();
+
+        document.getElementById('alertEmailsSent').textContent =
+            Number(summary.alert_emails_sent).toLocaleString();
 
         document.getElementById('securityFlags').textContent =
             Number(summary.security_flags).toLocaleString();
@@ -250,12 +265,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
 
-            const selectedEvent = eventFilter.value;
-
             const url = new URL(dataUrl, window.location.href);
+
+            const selectedEvent = eventFilter.value;
+            const dateFrom = document.getElementById('dateFromFilter').value;
+            const dateTo = document.getElementById('dateToFilter').value;
+            const username = document.getElementById('usernameFilter').value.trim();
+            const ipAddress = document.getElementById('ipFilter').value.trim();
 
             if (selectedEvent) {
                 url.searchParams.set('event_type', selectedEvent);
+            }
+
+            if (dateFrom) {
+                url.searchParams.set('date_from', dateFrom);
+            }
+
+            if (dateTo) {
+                url.searchParams.set('date_to', dateTo);
+            }
+
+            if (username) {
+                url.searchParams.set('username', username);
+            }
+
+            if (ipAddress) {
+                url.searchParams.set('ip_address', ipAddress);
             }
 
             const response = await fetch(url, {
@@ -307,6 +342,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Filter activity events.
     eventFilter.addEventListener('change', loadDashboard);
+
+    document.getElementById('dateFromFilter')
+        .addEventListener('change', loadDashboard);
+
+    document.getElementById('dateToFilter')
+        .addEventListener('change', loadDashboard);
+
+    document.getElementById('usernameFilter')
+        .addEventListener('input', loadDashboard);
+
+    document.getElementById('ipFilter')
+        .addEventListener('input', loadDashboard);
 
     // Initial dashboard load.
     loadDashboard();

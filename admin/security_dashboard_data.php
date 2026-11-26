@@ -12,7 +12,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate');
 try {
 
     /* ==========================================
-       SUMMARY STATISTICS
+    SUMMARY STATISTICS
     ========================================== */
 
     $totalEvents = (int) $pdo->query("
@@ -21,17 +21,52 @@ try {
         WHERE created_at >= NOW() - INTERVAL 24 HOUR
     ")->fetchColumn();
 
+    $successfulLogins = (int) $pdo->query("
+        SELECT COUNT(*)
+        FROM activity_log
+        WHERE LOWER(event_type) = 'login_success'
+        AND created_at >= NOW() - INTERVAL 24 HOUR
+    ")->fetchColumn();
+
     $failedLogins = (int) $pdo->query("
         SELECT COUNT(*)
         FROM activity_log
-        WHERE event_type = 'LOGIN_FAILED'
+        WHERE LOWER(event_type) = 'login_failed'
         AND created_at >= NOW() - INTERVAL 24 HOUR
+    ")->fetchColumn();
+
+    $lockedAccounts = (int) $pdo->query("
+        SELECT COUNT(*)
+        FROM users
+        WHERE account_status = 'locked'
+        AND locked_until > NOW()
     ")->fetchColumn();
 
     $blockedIps = (int) $pdo->query("
         SELECT COUNT(*)
         FROM ip_blocks
         WHERE blocked_until > NOW()
+    ")->fetchColumn();
+
+    $otpSent = (int) $pdo->query("
+        SELECT COUNT(*)
+        FROM activity_log
+        WHERE event_type = 'OTP_SENT'
+        AND created_at >= NOW() - INTERVAL 24 HOUR
+    ")->fetchColumn();
+
+    $otpFailed = (int) $pdo->query("
+        SELECT COUNT(*)
+        FROM activity_log
+        WHERE event_type = 'OTP_FAILED'
+        AND created_at >= NOW() - INTERVAL 24 HOUR
+    ")->fetchColumn();
+
+    $alertEmailsSent = (int) $pdo->query("
+        SELECT COUNT(*)
+        FROM activity_log
+        WHERE event_type = 'ALERT_EMAIL_SENT'
+        AND created_at >= NOW() - INTERVAL 24 HOUR
     ")->fetchColumn();
 
     $securityFlags = (int) $pdo->query("
@@ -141,11 +176,16 @@ try {
     $flags = $flagsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 
+    
     /* ==========================================
-       LATEST 50 ACTIVITY EVENTS
+    LATEST 50 ACTIVITY EVENTS
     ========================================== */
 
     $eventFilter = trim($_GET['event_type'] ?? '');
+    $dateFrom = trim($_GET['date_from'] ?? '');
+    $dateTo = trim($_GET['date_to'] ?? '');
+    $usernameFilter = trim($_GET['username'] ?? '');
+    $ipFilter = trim($_GET['ip_address'] ?? '');
 
     $allowedEvents = [
         'REGISTERED',
@@ -179,14 +219,60 @@ try {
             ON a.user_id = u.id_number
     ";
 
+    $conditions = [];
+    $params = [];
+
+    // Event type filter.
     if (
         $eventFilter !== '' &&
         in_array($eventFilter, $allowedEvents, true)
     ) {
+        $conditions[] = "a.event_type = :event_type";
+        $params[':event_type'] = $eventFilter;
+    }
 
-        $sql .= "
-            WHERE a.event_type = :event_type
+    // Validate date format before applying date filters.
+    $validDate = function ($date) {
+        if ($date === '') {
+            return false;
+        }
+
+        $parsed = DateTime::createFromFormat('!Y-m-d', $date);
+
+        return $parsed && $parsed->format('Y-m-d') === $date;
+    };
+
+    if ($validDate($dateFrom)) {
+        $conditions[] = "a.created_at >= :date_from";
+        $params[':date_from'] = $dateFrom . ' 00:00:00';
+    }
+
+    if ($validDate($dateTo)) {
+        $conditions[] = "a.created_at < :date_to";
+        $params[':date_to'] = date(
+            'Y-m-d 00:00:00',
+            strtotime($dateTo . ' +1 day')
+        );
+    }
+
+    // Username filter.
+    if ($usernameFilter !== '') {
+        $conditions[] = "
+            COALESCE(u.username, a.username_typed, 'Unknown')
+            LIKE :username
         ";
+        $params[':username'] = '%' . $usernameFilter . '%';
+    }
+
+    // IP address filter.
+    if ($ipFilter !== '') {
+        $conditions[] = "a.ip_address LIKE :ip_address";
+        $params[':ip_address'] = '%' . $ipFilter . '%';
+    }
+
+    // Apply all selected filters together.
+    if (!empty($conditions)) {
+        $sql .= " WHERE " . implode(" AND ", $conditions);
     }
 
     $sql .= "
@@ -195,23 +281,9 @@ try {
     ";
 
     $eventsStmt = $pdo->prepare($sql);
-
-    if (
-        $eventFilter !== '' &&
-        in_array($eventFilter, $allowedEvents, true)
-    ) {
-
-        $eventsStmt->execute([
-            ':event_type' => $eventFilter
-        ]);
-
-    } else {
-
-        $eventsStmt->execute();
-    }
+    $eventsStmt->execute($params);
 
     $events = $eventsStmt->fetchAll(PDO::FETCH_ASSOC);
-
 
     /* ==========================================
        JSON RESPONSE
@@ -220,12 +292,17 @@ try {
     echo json_encode([
         'success' => true,
 
-        'summary' => [
-            'total_events' => $totalEvents,
-            'failed_logins' => $failedLogins,
-            'blocked_ips' => $blockedIps,
-            'security_flags' => $securityFlags
-        ],
+                'summary' => [
+                    'total_events' => $totalEvents,
+                    'successful_logins' => $successfulLogins,
+                    'failed_logins' => $failedLogins,
+                    'locked_accounts' => $lockedAccounts,
+                    'blocked_ips' => $blockedIps,
+                    'otp_sent' => $otpSent,
+                    'otp_failed' => $otpFailed,
+                    'alert_emails_sent' => $alertEmailsSent,
+                    'security_flags' => $securityFlags
+                ],
 
         'chart' => [
             'labels' => $chartLabels,

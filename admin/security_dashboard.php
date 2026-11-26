@@ -39,11 +39,11 @@ require __DIR__ . '/../includes/header.php';
 
         <!-- SUMMARY CARDS -->
 
-        <section class="security-stats-grid">
+            <section class="security-stats-grid">
 
             <div class="security-stat-card">
-                <strong id="totalEvents">0</strong>
-                <small>Total Events (24 Hours)</small>
+                <strong id="successfulLogins">0</strong>
+                <small>Successful Logins (24 Hours)</small>
             </div>
 
             <div class="security-stat-card">
@@ -52,13 +52,38 @@ require __DIR__ . '/../includes/header.php';
             </div>
 
             <div class="security-stat-card">
+                <strong id="lockedAccounts">0</strong>
+                <small>Accounts Locked Now</small>
+            </div>
+
+            <div class="security-stat-card">
                 <strong id="blockedIps">0</strong>
-                <small>Currently Blocked IPs</small>
+                <small>IPs Blocked Now</small>
+            </div>
+
+            <div class="security-stat-card">
+                <strong id="otpSent">0</strong>
+                <small>OTPs Sent (24 Hours)</small>
+            </div>
+
+            <div class="security-stat-card">
+                <strong id="otpFailed">0</strong>
+                <small>OTPs Failed (24 Hours)</small>
+            </div>
+
+            <div class="security-stat-card">
+                <strong id="alertEmailsSent">0</strong>
+                <small>Alert Emails Sent (24 Hours)</small>
+            </div>
+
+            <div class="security-stat-card">
+                <strong id="totalEvents">0</strong>
+                <small>Total Events (24 Hours)</small>
             </div>
 
             <div class="security-stat-card">
                 <strong id="securityFlags">0</strong>
-                <small>Security Flags</small>
+                <small>Security Flags (24 Hours)</small>
             </div>
 
         </section>
@@ -150,8 +175,18 @@ require __DIR__ . '/../includes/header.php';
 
             <div class="security-filters">
 
-                <label for="eventFilter">Event Type</label>
+            <div>
+                <label for="dateFromFilter">Date From</label>
+                <input type="date" id="dateFromFilter">
+            </div>
 
+            <div>
+                <label for="dateToFilter">Date To</label>
+                <input type="date" id="dateToFilter">
+            </div>
+
+            <div>
+                <label for="eventFilter">Event Type</label>
                 <select id="eventFilter">
                     <option value="">All Events</option>
                     <option value="LOGIN_SUCCESS">LOGIN_SUCCESS</option>
@@ -164,12 +199,23 @@ require __DIR__ . '/../includes/header.php';
                     <option value="CSRF_REJECTED">CSRF_REJECTED</option>
                     <option value="ADMIN_ACCESS_DENIED">ADMIN_ACCESS_DENIED</option>
                 </select>
-
-                <button type="button" id="refreshDashboard">
-                    Refresh
-                </button>
-
             </div>
+
+            <div>
+                <label for="usernameFilter">Username</label>
+                <input type="text" id="usernameFilter" placeholder="Search username">
+            </div>
+
+            <div>
+                <label for="ipFilter">IP Address</label>
+                <input type="text" id="ipFilter" placeholder="Search IP address">
+            </div>
+
+            <button type="button" id="refreshDashboard">
+                Refresh
+            </button>
+
+        </div>
 
             <div class="table-responsive">
 
