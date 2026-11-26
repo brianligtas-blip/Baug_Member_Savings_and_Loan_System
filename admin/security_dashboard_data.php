@@ -176,7 +176,7 @@ try {
             a.created_at
         FROM activity_log a
         LEFT JOIN users u
-            ON a.user_id = u.id
+            ON a.user_id = u.id_number
     ";
 
     if (

@@ -43,10 +43,10 @@ $pendingLoan = 0.00;
 
 try {
     $stmt = $pdo->prepare("
-        SELECT COALESCE(SUM(amount), 0)
+        SELECT COALESCE(SUM(loan_amount), 0)
         FROM loans
         WHERE user_id = ?
-        AND status = 'Pending'
+        AND LOWER(status) = 'pending'
     ");
 
     $stmt->execute([$userId]);
